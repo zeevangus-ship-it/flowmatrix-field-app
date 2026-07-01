@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1A1A1A">
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODAgMTgwIj4KICA8cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgZmlsbD0iIzFBMUExQSIvPgogIDxyZWN0IHdpZHRoPSIxODAiIGhlaWdodD0iMTgwIiByeD0iNDAiIGZpbGw9IiMxQTFBMUEiLz4KICA8dGV4dCB4PSI5MCIgeT0iMTE1IiBmb250LWZhbWlseT0iQXJpYWwgQmxhY2ssQXJpYWwiIGZvbnQtd2VpZ2h0PSI5MDAiIAogICAgZm9udC1zaXplPSI4MiIgZmlsbD0iIzhCMUExQSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Rk08L3RleHQ+CiAgPHJlY3QgeD0iMjgiIHk9IjEzMCIgd2lkdGg9IjEyNCIgaGVpZ2h0PSI0IiByeD0iMiIgZmlsbD0iIzhCMUExQSIgb3BhY2l0eT0iMC42Ii8+Cjwvc3ZnPg==">
+<title>FM Field</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --black:#111;--dark:#1A1A1A;--card:#222;--border:#333;
+  --red:#8B1A1A;--redl:#B02020;--grey:#666;--lgrey:#AAA;
+  --white:#F5F5F5;--green:#1E5C2E;--amber:#7A5200;
+}
+html,body{
+  height:100%;width:100%;background:var(--black);color:var(--white);
+  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+  overflow:hidden;touch-action:manipulation;
+}
+
+/* APP SHELL — JS sets --safe-bot at runtime */
+#app{
+  display:flex;flex-direction:column;
+  height:100vh;width:100%;
+  padding-bottom:var(--safe-bot,0px);
+}
+
+/* HEADER */
+#header{
+  flex-shrink:0;background:var(--dark);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;
+  justify-content:space-between;
+  padding:0 10px;
+  height:52px;
+  padding-top:var(--safe-top,0px);
+}
+#hdr-info{flex:1;min-width:0;padding-right:8px;}
+#hdr-client{font-size:12px;font-weight:700;color:var(--lgrey);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#hdr-meta{font-size:11px;color:#B08020;font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#hdr-btns{display:flex;gap:6px;flex-shrink:0;}
+.hbtn{
+  width:36px;height:36px;border-radius:8px;border:none;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;cursor:pointer;flex-shrink:0;
+}
+.hbtn-swap{background:var(--red);color:var(--white);}
+.hbtn-add{background:var(--red);color:var(--white);font-size:22px;font-weight:300;}
+.hbtn-set{background:var(--card);border:1px solid var(--border);color:var(--lgrey);font-size:15px;}
+
+/* CONTENT */
+#content{flex:1;overflow:hidden;position:relative;min-height:0;}
+.tab-panel{position:absolute;inset:0;display:none;flex-direction:column;
+  padding:10px 12px 8px;gap:8px;}
+.tab-panel.active{display:flex;}
+
+/* TAB BAR */
+#tabbar{
+  flex-shrink:0;height:50px;
+  background:var(--dark);border-top:1px solid var(--border);
+  display:grid;grid-template-columns:repeat(4,1fr);
+}
+.tab-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;cursor:pointer;border:none;background:transparent;
+  color:var(--grey);font-size:10px;font-weight:500;padding:6px 4px;}
+.tab-btn .ti{font-size:16px;line-height:1;}
+.tab-btn.active{color:var(--redl);}
+
+/* GROUP BAR */
+.group-bar{display:flex;gap:6px;flex-shrink:0;}
+.g-btn{flex:1;padding:10px 4px;border-radius:10px;background:var(--card);
+  border:1.5px solid var(--border);color:var(--lgrey);font-size:13px;
+  font-weight:700;cursor:pointer;text-align:center;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.g-btn.active{background:var(--red);border-color:var(--redl);color:var(--white);}
+
+/* PA8 */
+.pa8-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;flex:1;min-height:0;}
+.pa8-btn{border-radius:12px;border:1.5px solid var(--border);background:var(--card);
+  color:var(--white);cursor:pointer;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:4px;padding:8px 4px;}
+.pa8-btn:active{background:var(--red);border-color:var(--redl);}
+.pa8-code{font-size:19px;font-weight:800;}
+.pa8-label{font-size:10px;color:var(--grey);text-align:center;}
+
+/* SUBLAYER */
+#sublayer-strip{display:none;background:var(--dark);border:1.5px solid var(--red);
+  border-radius:12px;padding:8px;flex-shrink:0;}
+#sublayer-strip.visible{display:block;}
+#sl-title{font-size:11px;color:var(--grey);margin-bottom:6px;text-align:center;}
+#sl-btns{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
+.sl-btn{background:var(--card);border:1px solid var(--border);color:var(--white);
+  font-size:11px;font-weight:600;padding:9px 3px;border-radius:8px;cursor:pointer;text-align:center;}
+.sl-btn:active{background:var(--red);}
+.sl-skip{color:var(--grey);}
+
+/* LAST ENTRY */
+.last-entry{height:30px;display:flex;align-items:center;justify-content:center;
+  font-size:11px;color:var(--lgrey);flex-shrink:0;background:var(--dark);
+  border-radius:8px;border:1px solid var(--border);font-family:'Courier New',monospace;}
+.last-entry.flash{color:#4CAF50;border-color:#4CAF50;}
+
+/* SHADOW */
+.shadow-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;flex-shrink:0;}
+.sh-btn{background:var(--card);border:1.5px solid var(--border);color:var(--white);
+  border-radius:10px;padding:9px 4px;cursor:pointer;display:flex;flex-direction:column;
+  align-items:center;gap:3px;}
+.sh-btn.selected{background:var(--red);border-color:var(--redl);}
+.sh-code{font-size:14px;font-weight:800;}
+.sh-label{font-size:9px;color:var(--grey);text-align:center;line-height:1.2;}
+.sh-btn.selected .sh-label{color:#ffaaaa;}
+
+.conf-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;flex-shrink:0;}
+.conf-btn{padding:11px;border-radius:10px;border:1.5px solid var(--border);
+  background:var(--card);color:var(--white);font-size:14px;font-weight:700;
+  cursor:pointer;text-align:center;}
+.conf-btn.selected{background:var(--red);border-color:var(--redl);}
+.conf-sub{font-size:9px;color:var(--grey);display:block;margin-top:2px;}
+.conf-btn.selected .conf-sub{color:#ffaaaa;}
+
+/* PARTICIPANT ROW */
+.p-row{display:flex;flex-wrap:wrap;gap:6px;flex-shrink:0;
+  background:var(--dark);border-radius:10px;padding:8px;
+  min-height:46px;align-items:center;}
+.p-empty{font-size:11px;color:var(--border);padding:2px 4px;}
+.p-btn{padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);
+  background:var(--card);color:var(--white);font-size:12px;font-weight:700;cursor:pointer;}
+.p-btn.selected{background:var(--red);border-color:var(--redl);}
+
+.action-btn{border-radius:12px;color:var(--grey);font-size:15px;font-weight:700;
+  padding:13px;cursor:pointer;flex-shrink:0;border:1.5px solid var(--border);
+  background:var(--card);text-align:center;}
+.action-btn.ready{background:var(--green);border-color:var(--green);color:var(--white);}
+
+/* ORG */
+.org-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;flex:1;min-height:0;}
+.org-btn{border-radius:12px;border:1.5px solid var(--border);background:var(--card);
+  color:var(--white);cursor:pointer;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:4px;padding:8px 4px;}
+.org-btn.selected{background:var(--red);border-color:var(--redl);}
+.org-code{font-size:16px;font-weight:800;}
+.org-label{font-size:9px;color:var(--grey);text-align:center;line-height:1.3;}
+.org-btn.selected .org-label{color:#ffaaaa;}
+
+/* LOG */
+.log-list{flex:1;overflow-y:auto;background:var(--dark);border-radius:12px;
+  border:1px solid var(--border);padding:8px;
+  font-family:'Courier New',monospace;font-size:12px;color:var(--lgrey);line-height:1.9;
+  min-height:0;}
+.log-entry{border-bottom:1px solid #252525;padding:2px 0;}
+.log-entry:last-child{border-bottom:none;}
+.lt{color:var(--grey);}
+.lg{color:var(--redl);font-weight:700;}
+.ls{color:var(--white);font-weight:600;}
+.lsh{color:#88AAFF;}
+.lsys{color:#555;font-style:italic;}
+.lact{color:#B08020;font-weight:700;}
+.room-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;flex-shrink:0;}
+.room-btn{background:var(--card);border:1.5px solid var(--border);color:var(--white);
+  font-size:18px;padding:9px;border-radius:10px;cursor:pointer;text-align:center;}
+.room-btn:active{background:#333;}
+.rlabel{font-size:9px;color:var(--grey);display:block;margin-top:2px;}
+.copy-btn{background:var(--red);border:none;border-radius:12px;color:var(--white);
+  font-size:15px;font-weight:700;padding:13px;cursor:pointer;flex-shrink:0;}
+.copy-btn.copied{background:var(--green);}
+.new-act-btn{background:var(--card);border:1.5px solid var(--border);border-radius:12px;
+  color:var(--lgrey);font-size:13px;font-weight:600;padding:10px;cursor:pointer;flex-shrink:0;}
+
+/* ── MODALS ── */
+.modal-wrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,.93);
+  z-index:200;flex-direction:column;align-items:center;justify-content:center;
+  padding:20px;gap:12px;}
+.modal-wrap.open{display:flex;}
+.modal-title{font-size:20px;font-weight:700;color:var(--white);text-align:center;}
+.modal-sub{font-size:12px;color:var(--grey);text-align:center;line-height:1.5;}
+.modal-input{width:100%;background:var(--card);border:1.5px solid var(--border);
+  border-radius:12px;padding:15px;color:var(--white);font-size:18px;outline:none;
+  text-align:center;-webkit-appearance:none;}
+.modal-input:focus{border-color:var(--red);}
+.modal-group-row{display:flex;gap:8px;width:100%;flex-wrap:wrap;}
+.mg-btn{flex:1;min-width:60px;padding:13px 8px;border-radius:10px;background:var(--card);
+  border:1.5px solid var(--border);color:var(--white);font-size:14px;font-weight:700;
+  cursor:pointer;text-align:center;}
+.mg-btn.selected{background:var(--red);border-color:var(--redl);}
+.modal-confirm{width:100%;background:var(--card);border:1.5px solid var(--border);
+  border-radius:12px;color:var(--grey);font-size:16px;font-weight:700;
+  padding:15px;cursor:pointer;}
+.modal-confirm.ready{background:var(--green);border-color:var(--green);color:var(--white);}
+.modal-cancel{background:transparent;border:1px solid var(--border);border-radius:12px;
+  color:var(--grey);font-size:14px;padding:11px;cursor:pointer;width:100%;}
+.modal-note{font-size:11px;color:var(--grey);text-align:center;}
+
+/* SWAP MODAL */
+#swap-modal .p-list{width:100%;display:flex;flex-direction:column;gap:6px;
+  max-height:40vh;overflow-y:auto;}
+.swap-p-btn{width:100%;padding:12px 14px;border-radius:10px;background:var(--card);
+  border:1.5px solid var(--border);color:var(--white);font-size:14px;
+  display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+.swap-p-btn.selected{border-color:var(--redl);background:#2A1111;}
+.swap-p-grp{font-size:11px;color:var(--redl);font-weight:700;}
+
+/* SETTINGS */
+#settings-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.97);
+  z-index:100;flex-direction:column;padding:18px 16px 24px;gap:9px;overflow-y:auto;}
+#settings-overlay.open{display:flex;}
+.s-title{font-size:20px;font-weight:700;color:var(--white);}
+.s-sec{font-size:10px;color:var(--grey);margin-top:5px;margin-bottom:3px;
+  text-transform:uppercase;letter-spacing:.06em;}
+.s-field{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:12px;color:var(--white);font-size:15px;width:100%;outline:none;-webkit-appearance:none;}
+.s-field:focus{border-color:var(--red);}
+.s-row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.s-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
+.s-divider{height:1px;background:var(--border);margin:4px 0;}
+/* Engagement type selector */
+.eng-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.eng-btn{padding:13px;border-radius:10px;background:var(--card);
+  border:1.5px solid var(--border);color:var(--lgrey);font-size:13px;font-weight:700;
+  cursor:pointer;text-align:center;}
+.eng-btn.selected{background:var(--red);border-color:var(--redl);color:var(--white);}
+/* Group name fields */
+.grp-name-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.grp-name-wrap{display:flex;align-items:center;gap:6px;}
+.grp-code{color:var(--redl);font-weight:700;font-size:12px;width:22px;flex-shrink:0;}
+.grp-input{background:var(--card);border:1px solid var(--border);border-radius:8px;
+  padding:10px;color:var(--white);font-size:13px;flex:1;outline:none;-webkit-appearance:none;}
+.grp-input:focus{border-color:var(--red);}
+/* Participant fields */
+.p-name-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.p-field-wrap{display:flex;align-items:center;gap:6px;}
+.p-code-lbl{color:var(--redl);font-weight:700;font-size:12px;width:24px;flex-shrink:0;}
+.p-name-inp{background:var(--card);border:1px solid var(--border);border-radius:8px;
+  padding:10px;color:var(--white);font-size:13px;flex:1;outline:none;-webkit-appearance:none;}
+.p-name-inp:focus{border-color:var(--red);}
+/* Paste area */
+.paste-area{width:100%;background:var(--card);border:1px solid var(--border);
+  border-radius:10px;padding:12px;color:var(--white);font-size:13px;
+  min-height:70px;outline:none;resize:none;-webkit-appearance:none;}
+.paste-area:focus{border-color:var(--red);}
+.paste-btn{background:var(--card);border:1.5px solid var(--border);border-radius:10px;
+  color:var(--lgrey);font-size:13px;font-weight:600;padding:11px;cursor:pointer;width:100%;}
+.save-btn{background:var(--red);border:none;border-radius:12px;color:var(--white);
+  font-size:16px;font-weight:700;padding:15px;cursor:pointer;}
+.danger-btn{background:transparent;border:1.5px solid var(--border);border-radius:12px;
+  color:var(--grey);font-size:13px;padding:11px;cursor:pointer;}
+.s-note{font-size:10px;color:var(--grey);line-height:1.5;}
+.assign-p-btn{padding:8px 11px;border-radius:8px;border:1.5px solid var(--border);
+  background:var(--card);color:var(--white);font-size:12px;font-weight:700;cursor:pointer;}
+.assign-p-btn .p-grp-tag{display:block;font-size:9px;color:var(--grey);margin-top:2px;font-weight:400;}
+.assign-p-btn.selected{background:var(--red);border-color:var(--redl);}
+.assign-p-btn.selected .p-grp-tag{color:#ffaaaa;}
+.assign-g-btn{flex:1;padding:11px 8px;border-radius:10px;background:var(--card);
+  border:1.5px solid var(--border);color:var(--white);font-size:13px;font-weight:700;
+  cursor:pointer;text-align:center;min-width:55px;}
+.assign-g-btn:active{background:var(--green);border-color:var(--green);color:var(--white);}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- HEADER -->
+<div id="header">
+  <div id="hdr-info">
+    <div id="hdr-client">FlowMatrix</div>
+    <div id="hdr-meta">Tap ⚙ to set up</div>
+  </div>
+  <div id="hdr-btns">
+    <button class="hbtn hbtn-swap" onclick="openSwap()" title="Mid-session swap / shuffle">⇄</button>
+    <button class="hbtn hbtn-add" onclick="openAdd()" title="Add participant">+</button>
+    <button class="hbtn hbtn-set" onclick="openSettings()" title="Settings">⚙</button>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div id="content">
+
+  <!-- PA8 -->
+  <div id="tab-pa8" class="tab-panel active">
+    <div class="group-bar" id="pa8-groups"></div>
+    <div class="pa8-grid" id="pa8-grid"></div>
+    <div id="sublayer-strip">
+      <div id="sl-title"></div>
+      <div id="sl-btns"></div>
+    </div>
+    <div class="last-entry" id="pa8-last">—</div>
+  </div>
+
+  <!-- SHADOW -->
+  <div id="tab-shadow" class="tab-panel">
+    <div class="group-bar" id="sh-groups"></div>
+    <div class="shadow-grid" id="sh-grid"></div>
+    <div class="conf-row" id="sh-conf"></div>
+    <div class="p-row" id="sh-prow"></div>
+    <button class="action-btn" id="sh-log-btn" onclick="logShadow()">LOG SHADOW ENTRY</button>
+    <div class="last-entry" id="sh-last">—</div>
+  </div>
+
+  <!-- ORG -->
+  <div id="tab-org" class="tab-panel">
+    <div class="group-bar" id="org-groups"></div>
+    <div class="org-grid" id="org-grid"></div>
+    <div class="conf-row" id="org-conf"></div>
+    <button class="action-btn" id="org-log-btn" onclick="logOrg()">LOG ORG DYNAMIC</button>
+    <div class="last-entry" id="org-last">—</div>
+  </div>
+
+  <!-- LOG -->
+  <div id="tab-log" class="tab-panel">
+    <div class="room-row" id="room-row"></div>
+    <div class="log-list" id="log-list"></div>
+    <button class="new-act-btn" onclick="openNewActivity()">▶ New Activity</button>
+    <button class="copy-btn" id="copy-btn" onclick="copyLog()">COPY SESSION LOG</button>
+  </div>
+
+</div>
+
+<!-- TAB BAR -->
+<div id="tabbar">
+  <button class="tab-btn active" onclick="switchTab('pa8',this)"><span class="ti">⬡</span>PA-8</button>
+  <button class="tab-btn" onclick="switchTab('shadow',this)"><span class="ti">◈</span>SHADOW</button>
+  <button class="tab-btn" onclick="switchTab('org',this)"><span class="ti">◫</span>ORG</button>
+  <button class="tab-btn" onclick="switchTab('log',this)"><span class="ti">≡</span>LOG</button>
+</div>
+</div>
+
+<!-- ADD PARTICIPANT MODAL -->
+<div class="modal-wrap" id="add-modal">
+  <div class="modal-title">Add Participant</div>
+  <div class="modal-sub">Name or initials · assign to group</div>
+  <input class="modal-input" id="add-name-input" placeholder="Name / initials"
+    maxlength="20" oninput="updateAddBtn()" autocomplete="off"
+    autocorrect="off" autocapitalize="words" spellcheck="false"/>
+  <div class="modal-group-row" id="add-group-row"></div>
+  <button class="modal-confirm" id="add-confirm-btn" onclick="confirmAdd()">ADD TO GROUP</button>
+  <button class="modal-cancel" onclick="closeModal('add-modal')">Cancel</button>
+</div>
+
+<!-- SWAP MODAL -->
+<div class="modal-wrap" id="swap-modal">
+  <div class="modal-title">Reassign Participant</div>
+  <div class="modal-sub">Tap participant → tap new group<br>Log records the move with timestamp</div>
+  <div class="p-list" id="swap-p-list"></div>
+  <div class="modal-group-row" id="swap-group-row" style="display:none"></div>
+  <button class="modal-confirm" id="swap-confirm-btn" onclick="confirmSwap()" style="display:none">ASSIGN / MOVE TO GROUP</button>
+  <button class="modal-cancel" onclick="closeModal('swap-modal')">Done</button>
+</div>
+
+<!-- NEW ACTIVITY MODAL -->
+<div class="modal-wrap" id="activity-modal">
+  <div class="modal-title">New Activity</div>
+  <div class="modal-sub">Log clears · participants &amp; groups stay</div>
+  <input class="modal-input" id="act-name-input" placeholder="Activity name"
+    maxlength="40" autocomplete="off" autocorrect="off" spellcheck="false"
+    oninput="document.getElementById('act-confirm-btn').classList.toggle('ready',this.value.trim().length>0)"/>
+  <button class="modal-confirm" id="act-confirm-btn" onclick="confirmNewActivity()">START ACTIVITY</button>
+  <button class="modal-cancel" onclick="closeModal('activity-modal')">Cancel</button>
+</div>
+
+<!-- SETTINGS -->
+<div id="settings-overlay">
+  <div class="s-title">⚙ Settings</div>
+  <div class="s-divider"></div>
+
+  <div class="s-sec">Client</div>
+  <input class="s-field" id="s-client" placeholder="Client name or code"/>
+
+  <div class="s-sec">Engagement Type</div>
+  <div class="eng-row">
+    <button class="eng-btn" id="eng-diag" onclick="selEng('Diagnostic')">Diagnostic</button>
+    <button class="eng-btn" id="eng-micro" onclick="selEng('MicroFix')">MicroFix</button>
+  </div>
+
+  <div class="s-row2">
+    <div>
+      <div class="s-sec">Activity Name</div>
+      <input class="s-field" id="s-activity" placeholder="e.g. Tall Stack"/>
+    </div>
+    <div>
+      <div class="s-sec">Groups (1–4)</div>
+      <select class="s-field" id="s-groups">
+        <option value="1">1 Group</option>
+        <option value="2">2 Groups</option>
+        <option value="3">3 Groups</option>
+        <option value="4" selected>4 Groups</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="s-sec">Group Names (optional — leave blank for G1/G2/G3/G4)</div>
+  <div class="grp-name-grid" id="grp-name-grid"></div>
+
+  <div class="s-divider"></div>
+  <div class="s-sec">Participants — enter names or paste list below</div>
+  <div class="p-name-grid" id="p-name-grid"></div>
+
+  <div class="s-sec">Paste list (comma or line separated)</div>
+  <textarea class="paste-area" id="paste-area"
+    placeholder="Shadi, Romesa, Khalid, Sara&#10;or one per line"></textarea>
+  <button class="paste-btn" onclick="importPaste()">↓ Import Names from Paste</button>
+
+  <div class="s-divider"></div>
+  <div class="s-sec">Group Assignment — assign participants to groups before starting</div>
+  <div class="s-note" style="margin-bottom:8px">Tap participants to select (multiple allowed) → tap a group to assign them all at once.<br>↺ button in the header is for mid-session swaps only.</div>
+  <div id="assign-block">
+    <div id="assign-p-area" style="display:flex;flex-wrap:wrap;gap:6px;background:var(--dark);border-radius:10px;padding:10px;min-height:46px;align-items:center;"></div>
+    <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;" id="assign-g-row"></div>
+    <div style="font-size:11px;color:var(--grey);margin-top:6px;" id="assign-status">No participants loaded yet</div>
+  </div>
+
+  <div class="s-divider"></div>
+  <button class="save-btn" onclick="saveSettings()">SAVE &amp; START</button>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+    <button class="danger-btn" onclick="clearActivity()">↺ Clear Log Only</button>
+    <button class="danger-btn" onclick="clearEngagement()">⊗ New Engagement</button>
+  </div>
+</div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────
+const PA8_DATA=[
+  {code:'FR',label:'Friction', sub:[['Ro-Fr','Role'],['De-Fr','Decision'],['Fl-Fr','Flow']]},
+  {code:'DR',label:'Drift',    sub:[['In-Dr','Intent'],['Lo-Dr','Logic'],['Ro-Dr','Role']]},
+  {code:'FG',label:'Fragment', sub:[['De-Fg','Decision'],['Ro-Fg','Role'],['Le-Fg','Leadership']]},
+  {code:'FC',label:'Fracture', sub:[['Ro-Fc','Role'],['De-Fc','Decision'],['Tr-Fc','Trust']]},
+  {code:'CO',label:'Collapse', sub:[['De-Co','Decision'],['Ro-Co','Role'],['In-Co','Info']]},
+  {code:'BR',label:'Break',    sub:[['Co-Br','Conflict'],['Ch-Br','Chaos'],['Ov-Br','Overdrive']]},
+];
+const SH_DATA=[
+  {code:'AN',label:'Anchor',     sub:'Informal auth'},
+  {code:'VT',label:'Veto',       sub:'Blocks quietly'},
+  {code:'BK',label:'Broker',     sub:'Controls info'},
+  {code:'SH',label:'Shield',     sub:'Absorbs blame'},
+  {code:'MI',label:'Mirror',     sub:'Reflects power'},
+  {code:'EX',label:'Exile',      sub:'Marginalised'},
+  {code:'HO',label:'H.Override', sub:'Cultural auth'},
+];
+const ORG_DATA=[
+  {code:'PT',label:'Power\nTopology'},
+  {code:'UR',label:'Unwritten\nRule'},
+  {code:'PS',label:'Protected\nStory'},
+  {code:'IA',label:'Informal\nAlliance'},
+  {code:'SF',label:'Scapegoat\nFn.'},
+  {code:'FM',label:'Frozen\nMoment'},
+];
+const ROOM_SYMS=['↑','↓','→','!','∅'];
+const ROOM_LBL=['Rising','Falling','Stable','Spike','Flat'];
+
+// ── STATE ─────────────────────────────────────────────────────────
+let S={
+  client:'',engType:'Diagnostic',activity:'',groupCount:4,
+  groupNames:['','','',''],   // custom names, empty = use G1/G2/G3/G4
+  activeGroup:'G1',
+  participants:[],            // [{name, prefix, role, group}] group=null means unassigned
+  shSel:null,shConf:null,shPart:null,
+  orgSel:null,orgConf:null,
+  log:[],
+  startTime:Date.now()
+};
+let addGroupSel=null;
+let swapPersonSel=null;
+let swapGroupSel=null;
+let slTimer=null;
+
+// ── PREFIX GENERATION ────────────────────────────────────────────
+function genPrefix(fullName){
+  // Split name into words, remove empty
+  const parts=fullName.trim().split(/\s+/).filter(w=>w.length>0);
+  let prefix='';
+  if(parts.length===1){
+    // Single name: first 2 chars, capitalise first
+    prefix=parts[0].substring(0,1).toUpperCase()+parts[0].substring(1,2).toLowerCase();
+  } else {
+    // Multi-word: first 2 of first word + first char of last word uppercase
+    const first=parts[0];
+    const last=parts[parts.length-1];
+    prefix=first.substring(0,1).toUpperCase()+first.substring(1,2).toLowerCase()+last.substring(0,1).toUpperCase();
+  }
+  return prefix||'P';
+}
+function uniquePrefix(fullName,existingParticipants,excludeIdx){
+  const base=genPrefix(fullName);
+  const taken=existingParticipants
+    .filter((_,i)=>i!==excludeIdx)
+    .map(p=>p.prefix);
+  if(!taken.includes(base))return base;
+  let n=2;
+  while(taken.includes(base+n))n++;
+  return base+n;
+}
+function parseNameRole(raw){
+  // Split off trailing role: Ahmed TL, Sara CEO, Khalid P
+  const parts=raw.trim().split(/\s+/);
+  const ROLES=['TL','CEO','COO','HR','P','MD','GM','VP','DIR','CFO','CTO','MGR'];
+  const last=parts[parts.length-1].toUpperCase();
+  if(parts.length>1&&ROLES.includes(last)){
+    return {name:parts.slice(0,-1).join(' '),role:parts[parts.length-1].toUpperCase()};
+  }
+  return {name:raw.trim(),role:''};
+}
+
+// ── SAFE AREA FIX — runtime for iPhone 11 Pro ────────────────────
+function applySafeAreas(){
+  const app=document.getElementById('app');
+  // Read CSS env values via a test element
+  const el=document.createElement('div');
+  el.style.cssText='position:fixed;bottom:0;width:1px;height:env(safe-area-inset-bottom,0px);pointer-events:none;visibility:hidden;';
+  document.body.appendChild(el);
+  const h=el.offsetHeight;
+  document.body.removeChild(el);
+  const safeBot=Math.max(h,0);
+  app.style.setProperty('--safe-bot',safeBot+'px');
+  // Also set top safe area
+  const el2=document.createElement('div');
+  el2.style.cssText='position:fixed;top:0;width:1px;height:env(safe-area-inset-top,0px);pointer-events:none;visibility:hidden;';
+  document.body.appendChild(el2);
+  const ht=el2.offsetHeight;
+  document.body.removeChild(el2);
+  app.style.setProperty('--safe-top',Math.max(ht,0)+'px');
+}
+
+// ── PERSIST ───────────────────────────────────────────────────────
+function load(){
+  try{const d=localStorage.getItem('fm4');if(d){const p=JSON.parse(d);Object.assign(S,p);S.startTime=Date.now();}}catch(e){}
+}
+function persist(){
+  const d=Object.assign({},S);delete d.startTime;
+  localStorage.setItem('fm4',JSON.stringify(d));
+}
+function ts(){
+  const e=Math.floor((Date.now()-S.startTime)/1000);
+  return String(Math.floor(e/60)).padStart(2,'0')+':'+String(e%60).padStart(2,'0');
+}
+function groupLabel(i){
+  // i is 0-based
+  return (S.groupNames[i]&&S.groupNames[i].trim()) ? S.groupNames[i].trim() : 'G'+(i+1);
+}
+function groupId(i){ return 'G'+(i+1); }
+function groupParticipants(gid){
+  // unassigned appear in all groups; assigned appear only in their group
+  return S.participants.filter(p=>!p.group||p.group===gid);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+function init(){
+  applySafeAreas();
+  load();
+  buildAll();
+  if(!S.client) openSettings();
+}
+function buildAll(){
+  updateHeader();
+  buildGroupBars();
+  buildPA8();
+  buildShadow();
+  buildOrg();
+  buildLogTab();
+  refreshParticipantRow();
+}
+function updateHeader(){
+  document.getElementById('hdr-client').textContent=
+    (S.client||'FlowMatrix')+(S.engType?' · '+S.engType:'');
+  document.getElementById('hdr-meta').textContent=
+    (S.activity ? '▶ '+S.activity : 'No activity set');
+}
+
+// ── GROUP BARS ────────────────────────────────────────────────────
+function buildGroupBars(){
+  ['pa8-groups','sh-groups','org-groups'].forEach(id=>renderGroupBar(id));
+}
+function renderGroupBar(id){
+  const el=document.getElementById(id);if(!el)return;
+  el.innerHTML='';
+  for(let i=0;i<S.groupCount;i++){
+    const gid=groupId(i);const lbl=groupLabel(i);
+    const b=document.createElement('button');
+    b.className='g-btn'+(S.activeGroup===gid?' active':'');
+    b.textContent=lbl;b.dataset.gid=gid;
+    b.onclick=()=>setGroup(gid);
+    el.appendChild(b);
+  }
+}
+function setGroup(gid){
+  S.activeGroup=gid;
+  document.querySelectorAll('.g-btn').forEach(b=>b.classList.toggle('active',b.dataset.gid===gid));
+  S.shSel=null;S.shConf=null;S.shPart=null;
+  document.querySelectorAll('#sh-grid .sh-btn,#sh-conf .conf-btn,#sh-prow .p-btn')
+    .forEach(b=>b.classList.remove('selected'));
+  updateShBtn();
+  refreshParticipantRow();
+}
+
+// ── PA8 ───────────────────────────────────────────────────────────
+function buildPA8(){
+  const grid=document.getElementById('pa8-grid');grid.innerHTML='';
+  PA8_DATA.forEach(layer=>{
+    const b=document.createElement('button');b.className='pa8-btn';
+    b.innerHTML=`<span class="pa8-code">${layer.code}</span><span class="pa8-label">${layer.label}</span>`;
+    b.onclick=()=>tapPA8(layer);
+    grid.appendChild(b);
+  });
+}
+function tapPA8(layer){
+  clearTimeout(slTimer);
+  document.getElementById('sl-title').textContent=layer.code+' — sub-layer or skip';
+  const btns=document.getElementById('sl-btns');btns.innerHTML='';
+  layer.sub.forEach(sl=>{
+    const b=document.createElement('button');b.className='sl-btn';
+    b.innerHTML=`<div>${sl[0]}</div><div style="font-size:9px;color:#666;margin-top:1px">${sl[1]}</div>`;
+    b.onclick=()=>{logPA8(layer,sl[0]);hideSL();};
+    btns.appendChild(b);
+  });
+  const skip=document.createElement('button');
+  skip.className='sl-btn sl-skip';skip.textContent='—';
+  skip.onclick=()=>{logPA8(layer,null);hideSL();};
+  btns.appendChild(skip);
+  document.getElementById('sublayer-strip').classList.add('visible');
+  slTimer=setTimeout(()=>{hideSL();logPA8(layer,null);},5000);
+}
+function hideSL(){
+  clearTimeout(slTimer);
+  document.getElementById('sublayer-strip').classList.remove('visible');
+}
+function logPA8(layer,sub){
+  const gLbl=getActiveGroupLabel();
+  const entry=ts()+' '+gLbl+' '+layer.code+(sub?'·'+sub:'');
+  addLog(entry,'pa8');flash('pa8-last',entry);
+}
+function getActiveGroupLabel(){
+  const idx=parseInt(S.activeGroup.replace('G',''))-1;
+  return groupLabel(idx);
+}
+
+// ── SHADOW ────────────────────────────────────────────────────────
+function buildShadow(){
+  const grid=document.getElementById('sh-grid');grid.innerHTML='';
+  SH_DATA.forEach(sh=>{
+    const b=document.createElement('button');
+    b.className='sh-btn';b.dataset.code=sh.code;
+    b.innerHTML=`<span class="sh-code">${sh.code}</span><span class="sh-label">${sh.label}</span>`;
+    b.onclick=()=>{
+      S.shSel=sh.code;
+      document.querySelectorAll('#sh-grid .sh-btn').forEach(x=>x.classList.toggle('selected',x.dataset.code===sh.code));
+      updateShBtn();
+    };
+    grid.appendChild(b);
+  });
+  buildConf('sh-conf','shConf',updateShBtn);
+}
+function buildConf(rowId,stateKey,cb){
+  const row=document.getElementById(rowId);row.innerHTML='';
+  [['L','Low'],['M','Medium'],['H','High']].forEach(([c,l])=>{
+    const b=document.createElement('button');
+    b.className='conf-btn';b.dataset.val=c;
+    b.innerHTML=c+`<span class="conf-sub">${l}</span>`;
+    b.onclick=()=>{
+      S[stateKey]=c;
+      document.querySelectorAll('#'+rowId+' .conf-btn').forEach(x=>x.classList.toggle('selected',x.dataset.val===c));
+      cb();
+    };
+    row.appendChild(b);
+  });
+}
+function refreshParticipantRow(){
+  const row=document.getElementById('sh-prow');if(!row)return;
+  row.innerHTML='';
+  const members=groupParticipants(S.activeGroup);
+  if(members.length===0){
+    const e=document.createElement('span');e.className='p-empty';
+    e.textContent='No participants — tap + to add';row.appendChild(e);return;
+  }
+  members.forEach(p=>{
+    const b=document.createElement('button');b.className='p-btn';b.dataset.code=p.name;
+    const pfx=p.prefix||genPrefix(p.name);
+    b.textContent=pfx+(p.role?' '+p.role:'');b.title=p.name;b.dataset.prefix=pfx;
+    b.onclick=()=>{
+      S.shPart=p.name;
+      document.querySelectorAll('#sh-prow .p-btn').forEach(x=>x.classList.toggle('selected',x.dataset.code===p.name));
+      updateShBtn();
+    };
+    row.appendChild(b);
+  });
+}
+function updateShBtn(){
+  document.getElementById('sh-log-btn').classList.toggle('ready',!!(S.shSel&&S.shConf&&S.shPart));
+}
+function logShadow(){
+  if(!S.shSel||!S.shConf||!S.shPart)return;
+  const gLbl=getActiveGroupLabel();
+  const sp=S.participants.find(x=>x.name===S.shPart);
+  const pfx=sp?(sp.prefix||genPrefix(sp.name)):'??';
+  const role=sp&&sp.role?sp.role:'';
+  const entry=ts()+' '+gLbl+' '+S.shPart+'('+pfx+')'+(role?' '+role:'')+' · '+S.shSel+'·'+S.shConf;
+  addLog(entry,'shadow');flash('sh-last',entry);
+  S.shSel=null;S.shConf=null;S.shPart=null;
+  document.querySelectorAll('#sh-grid .sh-btn,#sh-conf .conf-btn,#sh-prow .p-btn')
+    .forEach(b=>b.classList.remove('selected'));
+  updateShBtn();
+}
+
+// ── ORG ───────────────────────────────────────────────────────────
+function buildOrg(){
+  const grid=document.getElementById('org-grid');grid.innerHTML='';
+  ORG_DATA.forEach(dyn=>{
+    const b=document.createElement('button');b.className='org-btn';b.dataset.code=dyn.code;
+    b.innerHTML=`<span class="org-code">${dyn.code}</span><span class="org-label">${dyn.label.replace('\n','<br>')}</span>`;
+    b.onclick=()=>{
+      S.orgSel=dyn.code;
+      document.querySelectorAll('#org-grid .org-btn').forEach(x=>x.classList.toggle('selected',x.dataset.code===dyn.code));
+      updateOrgBtn();
+    };
+    grid.appendChild(b);
+  });
+  buildConf('org-conf','orgConf',updateOrgBtn);
+}
+function updateOrgBtn(){
+  document.getElementById('org-log-btn').classList.toggle('ready',!!(S.orgSel&&S.orgConf));
+}
+function logOrg(){
+  if(!S.orgSel)return;
+  const gLbl=getActiveGroupLabel();
+  const entry=ts()+' '+gLbl+' ORG['+S.orgSel+'·'+(S.orgConf||'L')+']';
+  addLog(entry,'org');flash('org-last',entry);
+  S.orgSel=null;S.orgConf=null;
+  document.querySelectorAll('#org-grid .org-btn,#org-conf .conf-btn').forEach(b=>b.classList.remove('selected'));
+  updateOrgBtn();
+}
+
+// ── LOG ───────────────────────────────────────────────────────────
+function buildLogTab(){
+  const rr=document.getElementById('room-row');rr.innerHTML='';
+  ROOM_SYMS.forEach((sym,i)=>{
+    const b=document.createElement('button');b.className='room-btn';
+    b.innerHTML=sym+`<span class="rlabel">${ROOM_LBL[i]}</span>`;
+    b.onclick=()=>addLog(ts()+' ROOM '+sym,'room');
+    rr.appendChild(b);
+  });
+  renderLog();
+}
+function addLog(entry,type){
+  S.log.push({entry,type});persist();renderLog();
+}
+function renderLog(){
+  const list=document.getElementById('log-list');list.innerHTML='';
+  S.log.forEach(item=>{
+    const div=document.createElement('div');div.className='log-entry';
+    const p=item.entry.split(' ');
+    let html=`<span class="lt">${p[0]}</span> `;
+    if(item.type==='activity'){
+      html+=`<span class="lact">${p.slice(1).join(' ')}</span>`;
+    } else if(item.type==='system'){
+      html+=`<span class="lsys">${p.slice(1).join(' ')}</span>`;
+    } else if(p[1]&&!p[1].startsWith('ROOM')){
+      html+=`<span class="lg">${p[1]}</span> `;
+      const rest=p.slice(2).join(' ');
+      // Shadow entries contain · separator, PA8 entries contain layer codes
+      if(rest.includes('·')&&!rest.startsWith('FR')&&!rest.startsWith('DR')&&!rest.startsWith('FG')&&!rest.startsWith('FC')&&!rest.startsWith('CO')&&!rest.startsWith('BR')){
+        html+=`<span class="lsh">${rest}</span>`;
+      } else {
+        html+=`<span class="ls">${rest}</span>`;
+      }
+    } else {
+      html+=`<span style="color:#666">${p.slice(1).join(' ')}</span>`;
+    }
+    div.innerHTML=html;list.appendChild(div);
+  });
+  list.scrollTop=list.scrollHeight;
+}
+function copyLog(){
+  const lines=[
+    '================================',
+    'FLOWMATRIX FIELD LOG',
+    '================================',
+    'Client:     '+S.client,
+    'Engagement: '+S.engType,
+    'Activity:   '+(S.activity||'Not set'),
+    'Date:       '+new Date().toLocaleDateString(),
+    'Time copied:'+new Date().toLocaleTimeString(),
+    '================================',
+    ''
+  ];
+  S.log.forEach(i=>lines.push(i.entry));
+  lines.push('');
+  lines.push('================================');
+  const text=lines.join('\n');
+  const btn=document.getElementById('copy-btn');
+  const done=()=>{btn.textContent='✓ COPIED';btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='COPY SESSION LOG';btn.classList.remove('copied');},2500);};
+  if(navigator.clipboard){navigator.clipboard.writeText(text).then(done);}
+  else{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);
+    ta.select();document.execCommand('copy');document.body.removeChild(ta);done();}
+}
+
+// ── NEW ACTIVITY ──────────────────────────────────────────────────
+function openNewActivity(){
+  document.getElementById('act-name-input').value='';
+  document.getElementById('act-confirm-btn').classList.remove('ready');
+  openModal('activity-modal');
+}
+function confirmNewActivity(){
+  const name=document.getElementById('act-name-input').value.trim();
+  if(!name)return;
+  S.activity=name;S.log=[];S.startTime=Date.now();
+  persist();closeModal('activity-modal');
+  updateHeader();renderLog();
+  addLog('── ACTIVITY: '+name+' ──','activity');
+}
+
+// ── SWAP PARTICIPANT ──────────────────────────────────────────────
+function openSwap(){
+  swapPersonSel=null;swapGroupSel=null;
+  // Build participant list
+  const list=document.getElementById('swap-p-list');list.innerHTML='';
+  if(S.participants.length===0){
+    list.innerHTML='<div style="color:#555;font-size:12px;text-align:center;padding:12px">No participants added yet</div>';
+  }
+  S.participants.forEach(p=>{
+    const gIdx=p.group?parseInt(p.group.replace('G',''))-1:-1;
+    const gLbl=gIdx>=0?groupLabel(gIdx):'Unassigned';
+    const b=document.createElement('button');b.className='swap-p-btn';b.dataset.name=p.name;
+    b.innerHTML=`<span>${p.name}</span><span class="swap-p-grp">${gLbl}</span>`;
+    b.onclick=()=>{
+      swapPersonSel=p.name;
+      document.querySelectorAll('.swap-p-btn').forEach(x=>x.classList.toggle('selected',x.dataset.name===p.name));
+      document.getElementById('swap-group-row').style.display='flex';
+      document.getElementById('swap-confirm-btn').style.display='block';
+      buildSwapGroupRow();
+    };
+    list.appendChild(b);
+  });
+  document.getElementById('swap-group-row').style.display='none';
+  document.getElementById('swap-confirm-btn').style.display='none';
+  openModal('swap-modal');
+}
+function buildSwapGroupRow(){
+  const row=document.getElementById('swap-group-row');row.innerHTML='';
+  // Add "Unassigned" option
+  const u=document.createElement('button');
+  u.className='mg-btn'+(swapGroupSel===null&&swapPersonSel?' selected':'');
+  u.textContent='All';u.dataset.g='';
+  u.onclick=()=>{swapGroupSel=null;document.querySelectorAll('#swap-group-row .mg-btn').forEach(x=>x.classList.toggle('selected',x.dataset.g===''));};
+  row.appendChild(u);
+  for(let i=0;i<S.groupCount;i++){
+    const gid=groupId(i);const lbl=groupLabel(i);
+    const b=document.createElement('button');b.className='mg-btn';b.dataset.g=gid;
+    b.textContent=lbl;
+    b.onclick=()=>{swapGroupSel=gid;document.querySelectorAll('#swap-group-row .mg-btn').forEach(x=>x.classList.toggle('selected',x.dataset.g===gid));};
+    row.appendChild(b);
+  }
+}
+function confirmSwap(){
+  if(!swapPersonSel)return;
+  const p=S.participants.find(x=>x.name===swapPersonSel);
+  if(!p)return;
+  const fromIdx=p.group?parseInt(p.group.replace('G',''))-1:-1;
+  const fromLbl=fromIdx>=0?groupLabel(fromIdx):null;
+  const toGid=swapGroupSel||null;
+  const toIdx=toGid?parseInt(toGid.replace('G',''))-1:-1;
+  const toLbl=toGid?groupLabel(toIdx):'All Groups';
+  p.group=toGid;
+  persist();
+  const entry=fromLbl
+    ? ts()+' MOVE '+swapPersonSel+' '+fromLbl+'→'+toLbl
+    : ts()+' ASSIGN '+swapPersonSel+' → '+toLbl;
+  addLog(entry,'system');
+  // Rebuild participant display
+  const list=document.getElementById('swap-p-list');
+  S.participants.forEach(pp=>{
+    const btn=list.querySelector('[data-name="'+pp.name+'"]');
+    if(btn){
+      const gi=pp.group?parseInt(pp.group.replace('G',''))-1:-1;
+      const gl=gi>=0?groupLabel(gi):'Unassigned';
+      btn.querySelector('.swap-p-grp').textContent=gl;
+    }
+  });
+  // Reset selection for next swap
+  swapPersonSel=null;swapGroupSel=null;
+  document.querySelectorAll('.swap-p-btn').forEach(b=>b.classList.remove('selected'));
+  document.getElementById('swap-group-row').style.display='none';
+  document.getElementById('swap-confirm-btn').style.display='none';
+  refreshParticipantRow();
+}
+
+// ── ADD PARTICIPANT ───────────────────────────────────────────────
+function openAdd(){
+  addGroupSel=S.activeGroup;
+  document.getElementById('add-name-input').value='';
+  const row=document.getElementById('add-group-row');row.innerHTML='';
+  // All groups option
+  const all=document.createElement('button');all.className='mg-btn';all.dataset.g='';
+  all.textContent='All';
+  all.onclick=()=>{addGroupSel=null;document.querySelectorAll('#add-group-row .mg-btn').forEach(x=>x.classList.toggle('selected',x.dataset.g===''));updateAddBtn();};
+  row.appendChild(all);
+  for(let i=0;i<S.groupCount;i++){
+    const gid=groupId(i);const lbl=groupLabel(i);
+    const b=document.createElement('button');b.className='mg-btn'+(gid===addGroupSel?' selected':'');
+    b.textContent=lbl;b.dataset.g=gid;
+    b.onclick=()=>{addGroupSel=gid;document.querySelectorAll('#add-group-row .mg-btn').forEach(x=>x.classList.toggle('selected',x.dataset.g===gid));updateAddBtn();};
+    row.appendChild(b);
+  }
+  updateAddBtn();
+  openModal('add-modal');
+  setTimeout(()=>document.getElementById('add-name-input').focus(),250);
+}
+function updateAddBtn(){
+  const name=document.getElementById('add-name-input').value.trim();
+  document.getElementById('add-confirm-btn').classList.toggle('ready',name.length>0);
+}
+function confirmAdd(){
+  const name=document.getElementById('add-name-input').value.trim();
+  if(!name)return;
+  const {name:pName,role:pRole}=parseNameRole(name);
+  const pPrefix=uniquePrefix(pName,S.participants,-1);
+  S.participants.push({name:pName,prefix:pPrefix,role:pRole,group:addGroupSel||null});
+  persist();closeModal('add-modal');
+  refreshParticipantRow();
+  const gIdx=addGroupSel?parseInt(addGroupSel.replace('G',''))-1:-1;
+  const lbl=gIdx>=0?groupLabel(gIdx):'All Groups';
+  addLog(ts()+' + '+pName+'('+pPrefix+')'+(pRole?' '+pRole:'')+' → '+lbl,'system');
+}
+
+// ── SETTINGS ─────────────────────────────────────────────────────
+function selEng(type){
+  S.engType=type;
+  document.getElementById('eng-diag').classList.toggle('selected',type==='Diagnostic');
+  document.getElementById('eng-micro').classList.toggle('selected',type==='MicroFix');
+}
+function openSettings(){
+  document.getElementById('s-client').value=S.client;
+  document.getElementById('s-activity').value=S.activity;
+  document.getElementById('s-groups').value=S.groupCount;
+  selEng(S.engType);
+  buildGrpNameGrid();
+  buildPNameGrid();
+  buildAssignBlock();
+  document.getElementById('paste-area').value='';
+  document.getElementById('settings-overlay').classList.add('open');
+}
+function buildGrpNameGrid(){
+  const grid=document.getElementById('grp-name-grid');grid.innerHTML='';
+  for(let i=0;i<4;i++){
+    const wrap=document.createElement('div');wrap.className='grp-name-wrap';
+    const lbl=document.createElement('span');lbl.className='grp-code';lbl.textContent='G'+(i+1);
+    const inp=document.createElement('input');inp.className='grp-input';
+    inp.placeholder='G'+(i+1);inp.value=S.groupNames[i]||'';inp.dataset.idx=i;
+    inp.autocomplete='off';inp.autocorrect='off';
+    wrap.appendChild(lbl);wrap.appendChild(inp);grid.appendChild(wrap);
+  }
+}
+function buildPNameGrid(){
+  const grid=document.getElementById('p-name-grid');grid.innerHTML='';
+  const count=S.participants.length+2;
+  for(let i=0;i<count;i++){
+    const p=S.participants[i];
+    const wrap=document.createElement('div');wrap.className='p-field-wrap';
+    wrap.style.cssText='display:flex;gap:4px;align-items:center;';
+    // # label
+    const lbl=document.createElement('span');lbl.className='p-code-lbl';
+    lbl.textContent='P'+(i+1);lbl.style.minWidth='24px';
+    // Name input
+    const nameInp=document.createElement('input');nameInp.className='p-name-inp';
+    nameInp.style.flex='2';nameInp.placeholder='Full name';
+    nameInp.value=p?p.name:'';nameInp.dataset.idx=i;nameInp.dataset.field='name';
+    nameInp.autocomplete='off';nameInp.autocorrect='off';nameInp.autocapitalize='words';
+    // Prefix input (auto-generated, editable)
+    const pfxInp=document.createElement('input');pfxInp.className='p-name-inp';
+    pfxInp.style.cssText='flex:1;color:#B08020;font-weight:700;min-width:36px;max-width:48px;';
+    pfxInp.placeholder='Pfx';pfxInp.value=p?p.prefix:'';pfxInp.dataset.idx=i;pfxInp.dataset.field='prefix';
+    pfxInp.autocomplete='off';pfxInp.maxLength=5;
+    // Role input
+    const roleInp=document.createElement('input');roleInp.className='p-name-inp';
+    roleInp.style.cssText='flex:1;min-width:36px;max-width:48px;color:#888;';
+    roleInp.placeholder='Role';roleInp.value=p?p.role:'';roleInp.dataset.idx=i;roleInp.dataset.field='role';
+    roleInp.autocomplete='off';roleInp.autocapitalize='characters';roleInp.maxLength=6;
+    // Auto-generate prefix when name is typed
+    nameInp.oninput=()=>{
+      if(nameInp.value.trim().length>2&&!pfxInp.dataset.manual){
+        pfxInp.value=uniquePrefix(nameInp.value,S.participants,i);
+      }
+      if(i===count-1&&nameInp.value.trim().length>0) buildPNameGrid();
+    };
+    pfxInp.oninput=()=>{pfxInp.dataset.manual='1';};
+    wrap.appendChild(lbl);wrap.appendChild(nameInp);wrap.appendChild(pfxInp);wrap.appendChild(roleInp);
+    grid.appendChild(wrap);
+  }
+}
+function importPaste(){
+  const raw=document.getElementById('paste-area').value;
+  if(!raw.trim())return;
+  const names=raw.split(/[\n,]+/).map(n=>n.trim()).filter(n=>n.length>0);
+  const existing=S.participants.map(p=>p.name.toLowerCase());
+  let added=0;
+  names.forEach(rawName=>{
+    const {name,role}=parseNameRole(rawName);
+    if(!existing.includes(name.toLowerCase())){
+      const prefix=uniquePrefix(name,S.participants,-1);
+      S.participants.push({name,prefix,role,group:null});
+      existing.push(name.toLowerCase());
+      added++;
+    }
+  });
+  buildPNameGrid();
+  buildAssignBlock();
+  document.getElementById('paste-area').value='';
+  const msg=added>0
+    ? 'Added '+added+' new name'+(added>1?'s':'')+'. Assign groups below.'
+    : 'No new names found — all names already exist.';
+  alert(msg);
+}
+
+// ── GROUP ASSIGNMENT (settings page — multi-select) ───────────────
+let assignSelected_set=new Set();
+function buildAssignBlock(){
+  const area=document.getElementById('assign-p-area');
+  const grow=document.getElementById('assign-g-row');
+  const status=document.getElementById('assign-status');
+  if(!area||!grow||!status)return;
+  assignSelected_set=new Set();
+  area.innerHTML='';grow.innerHTML='';
+  if(S.participants.length===0){
+    status.textContent='No participants loaded yet — add names above first';return;
+  }
+  S.participants.forEach(p=>{
+    const gIdx=p.group?parseInt(p.group.replace('G',''))-1:-1;
+    const gLbl=gIdx>=0?groupLabel(gIdx):'Unassigned';
+    const b=document.createElement('button');
+    b.className='assign-p-btn';b.dataset.name=p.name;
+    b.innerHTML=p.name+'<span class="p-grp-tag">'+gLbl+'</span>';
+    b.onclick=()=>{
+      if(assignSelected_set.has(p.name)){assignSelected_set.delete(p.name);b.classList.remove('selected');}
+      else{assignSelected_set.add(p.name);b.classList.add('selected');}
+      const n=assignSelected_set.size;
+      status.textContent=n>0?n+' selected — tap a group below':'Tap participants to select';
+    };
+    area.appendChild(b);
+  });
+  // Group buttons
+  const all=document.createElement('button');
+  all.className='assign-g-btn';all.style.background='#2A2A2A';all.textContent='All Groups';
+  all.onclick=()=>doAssign(null);grow.appendChild(all);
+  for(let i=0;i<S.groupCount;i++){
+    const gid=groupId(i);const lbl=groupLabel(i);
+    const b=document.createElement('button');b.className='assign-g-btn';b.textContent=lbl;
+    b.onclick=()=>doAssign(gid);grow.appendChild(b);
+  }
+  status.textContent='Tap participants to select (multiple ok) — then tap a group';
+}
+function doAssign(gid){
+  if(assignSelected_set.size===0){
+    document.getElementById('assign-status').textContent='Select at least one participant first';return;
+  }
+  const toIdx=gid?parseInt(gid.replace('G',''))-1:-1;
+  const toLbl=gid?groupLabel(toIdx):'All Groups';
+  const area=document.getElementById('assign-p-area');
+  assignSelected_set.forEach(name=>{
+    const p=S.participants.find(x=>x.name===name);if(!p)return;
+    const fromIdx=p.group?parseInt(p.group.replace('G',''))-1:-1;
+    const fromLbl=fromIdx>=0?groupLabel(fromIdx):null;
+    p.group=gid||null;
+    const entry=fromLbl
+      ?ts()+' MOVE '+name+' '+fromLbl+'→'+toLbl
+      :ts()+' ASSIGN '+name+' → '+toLbl;
+    S.log.push({entry,type:'system'});
+    const btn=area.querySelector('[data-name="'+name+'"]');
+    if(btn){btn.querySelector('.p-grp-tag').textContent=toLbl;btn.classList.remove('selected');}
+  });
+  persist();assignSelected_set.clear();
+  refreshParticipantRow();renderLog();
+  document.getElementById('assign-status').textContent=
+    'Assigned to '+toLbl+'. Select more or close settings.';
+}
+function saveSettings(){
+  S.client=document.getElementById('s-client').value.trim();
+  S.activity=document.getElementById('s-activity').value.trim();
+  S.groupCount=parseInt(document.getElementById('s-groups').value);
+  // Group names
+  document.querySelectorAll('#grp-name-grid input').forEach(inp=>{
+    S.groupNames[inp.dataset.idx]=inp.value.trim();
+  });
+  // Participant names, prefixes, roles from grid
+  const tempP=[];
+  const maxIdx=Math.max(S.participants.length+2,10);
+  for(let i=0;i<maxIdx;i++){
+    const nameInp=document.querySelector('#p-name-grid input[data-idx="'+i+'"][data-field="name"]');
+    const pfxInp=document.querySelector('#p-name-grid input[data-idx="'+i+'"][data-field="prefix"]');
+    const roleInp=document.querySelector('#p-name-grid input[data-idx="'+i+'"][data-field="role"]');
+    if(!nameInp)continue;
+    const name=nameInp.value.trim();
+    if(!name)continue;
+    const existing=S.participants[i];
+    const prefix=pfxInp&&pfxInp.value.trim()?pfxInp.value.trim():genPrefix(name);
+    const role=roleInp?roleInp.value.trim():'';
+    const group=existing?existing.group:null;
+    tempP.push({name,prefix,role,group});
+  }
+  S.participants=tempP.filter(p=>p.name);
+  S.startTime=Date.now();
+  persist();
+  document.getElementById('settings-overlay').classList.remove('open');
+  buildAll();
+}
+function clearActivity(){
+  if(!confirm('Clear log only? Participants and groups stay.'))return;
+  S.log=[];S.startTime=Date.now();persist();
+  document.getElementById('settings-overlay').classList.remove('open');
+  renderLog();
+}
+function clearEngagement(){
+  if(!confirm('Start new engagement? This clears everything including participants.'))return;
+  S.log=[];S.participants=[];S.groupNames=['','','',''];
+  S.client='';S.activity='';S.engType='Diagnostic';
+  S.startTime=Date.now();persist();
+  document.getElementById('settings-overlay').classList.remove('open');
+  buildAll();openSettings();
+}
+
+// ── MODAL HELPERS ─────────────────────────────────────────────────
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+// ── TABS ──────────────────────────────────────────────────────────
+function switchTab(name,btn){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(name==='log')renderLog();
+}
+
+// ── FLASH ─────────────────────────────────────────────────────────
+function flash(id,text){
+  const el=document.getElementById(id);el.textContent=text;el.classList.add('flash');
+  setTimeout(()=>{el.classList.remove('flash');el.textContent='—';},2500);
+}
+
+// ── KEYBOARD ──────────────────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    if(document.getElementById('add-modal').classList.contains('open'))confirmAdd();
+    if(document.getElementById('activity-modal').classList.contains('open'))confirmNewActivity();
+  }
+  if(e.key==='Escape'){
+    ['add-modal','swap-modal','activity-modal'].forEach(id=>closeModal(id));
+    document.getElementById('settings-overlay').classList.remove('open');
+  }
+});
+
+init();
+</script>
+</body>
+</html>
