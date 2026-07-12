@@ -1,0 +1,2439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlowMatrix Engine v3 — Diagnostic + MicroFix</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --black:#111;--dark:#1A1A1A;--card:#222;--border:#333;
+  --red:#8B1A1A;--redl:#B02020;--grey:#666;--lgrey:#AAA;
+  --white:#F5F5F5;--green:#1E5C2E;--amber:#B08020;--blue:#1A3A5C;
+}
+body{background:var(--black);color:var(--white);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+  min-height:100vh;padding:24px 20px;}
+h1{font-size:22px;font-weight:800;color:var(--red);letter-spacing:3px;margin-bottom:4px;}
+.subtitle{font-size:11px;color:var(--lgrey);letter-spacing:2px;margin-bottom:28px;}
+.section{background:var(--dark);border:1px solid var(--border);border-radius:12px;
+  padding:20px;margin-bottom:16px;}
+.section-title{font-size:10px;font-weight:700;color:var(--red);
+  letter-spacing:4px;text-transform:uppercase;margin-bottom:14px;}
+.row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+label{font-size:12px;color:var(--lgrey);display:block;margin-bottom:5px;}
+input[type=text],select,textarea{
+  background:var(--card);border:1px solid var(--border);color:var(--white);
+  border-radius:8px;padding:10px 12px;font-size:13px;width:100%;font-family:inherit;}
+input[type=text]:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);}
+textarea{resize:vertical;min-height:160px;
+  font-family:'Courier New',monospace;font-size:11.5px;line-height:1.7;}
+.field{flex:1;min-width:180px;}
+.mode-row{display:flex;gap:10px;}
+.mode-btn{flex:1;padding:12px;border-radius:9px;border:1.5px solid var(--border);
+  background:var(--card);color:var(--lgrey);font-size:13px;font-weight:700;
+  cursor:pointer;text-align:center;transition:all .15s;}
+.mode-btn.active{background:var(--red);border-color:var(--redl);color:var(--white);}
+.upload-zone{border:2px dashed var(--border);border-radius:10px;padding:28px;
+  text-align:center;cursor:pointer;color:var(--lgrey);font-size:13px;transition:border-color .2s;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--red);color:var(--white);}
+.upload-zone.loaded{border-color:var(--green);color:#4CAF50;}
+#file-input{display:none;}
+.calc-btn{width:100%;padding:16px;background:var(--red);border:none;border-radius:12px;
+  color:var(--white);font-size:15px;font-weight:800;letter-spacing:2px;cursor:pointer;}
+.calc-btn:hover{background:var(--redl);}
+.calc-btn:disabled{background:#333;color:#555;cursor:not-allowed;}
+.hint{font-size:11px;color:var(--grey);margin-top:5px;line-height:1.5;}
+#output-section{display:none;}
+
+/* OUTPUT STYLING */
+.out-wrap{background:var(--black);border:1px solid var(--border);border-radius:10px;
+  padding:0;overflow:hidden;}
+.out-nav{display:flex;gap:0;border-bottom:1px solid var(--border);overflow-x:auto;}
+.out-nav-btn{padding:8px 14px;background:transparent;border:none;border-right:1px solid var(--border);
+  color:var(--grey);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;
+  letter-spacing:.5px;}
+.out-nav-btn:hover{color:var(--white);background:var(--card);}
+.out-content{padding:20px;font-family:'Courier New',monospace;font-size:12px;
+  line-height:1.9;color:var(--lgrey);white-space:pre-wrap;word-break:break-word;
+  max-height:calc(100vh - 300px);overflow-y:auto;min-height:400px;}
+.out-section{margin-bottom:24px;}
+.out-h1{color:var(--red);font-weight:800;font-size:13px;letter-spacing:3px;
+  border-bottom:1px solid var(--red);padding-bottom:4px;margin-bottom:12px;}
+.out-h2{color:var(--amber);font-weight:700;font-size:12px;letter-spacing:1px;
+  margin-top:12px;margin-bottom:6px;}
+.out-confirmed{color:#4CAF50;}
+.out-flagged{color:#FF8888;}
+.out-field{color:#88AAFF;}
+.out-shadow{color:#CC88FF;}
+.out-private{color:#888;font-style:italic;border-left:2px solid var(--border);
+  padding-left:12px;margin-top:8px;}
+.out-strength{color:#81C784;}
+.copy-row{display:flex;gap:10px;padding:12px 16px;border-top:1px solid var(--border);}
+.copy-btn{flex:1;padding:11px;background:var(--green);border:none;border-radius:8px;
+  color:var(--white);font-size:13px;font-weight:700;cursor:pointer;}
+.copy-btn.alt{background:var(--card);border:1px solid var(--border);color:var(--lgrey);}
+.copy-btn.copied{background:#333;color:#4CAF50;}
+.error-box{background:#2A1111;border:1px solid var(--red);border-radius:8px;
+  padding:12px 16px;font-size:12px;color:#FF8888;margin-top:10px;line-height:1.6;}
+.info-badge{display:inline-block;background:var(--card);border:1px solid var(--border);
+  border-radius:6px;padding:3px 8px;font-size:10px;color:var(--lgrey);margin-left:8px;}
+</style>
+<style>
+.mode-section{display:none;}
+.mode-section.active{display:block;}
+.stage-selector{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:0;}
+.stage-btn{padding:20px;border-radius:12px;border:2px solid var(--border);
+  background:var(--card);color:var(--lgrey);font-size:13px;font-weight:700;
+  cursor:pointer;text-align:center;transition:all .2s;letter-spacing:1px;}
+.stage-btn:hover{border-color:var(--red);color:var(--white);}
+.stage-btn.active{background:var(--red);border-color:#B02020;color:var(--white);}
+.stage-icon{font-size:22px;display:block;margin-bottom:8px;}
+.stage-title{display:block;font-size:13px;margin-bottom:4px;}
+.stage-sub{display:block;font-size:10px;opacity:0.7;font-weight:400;letter-spacing:0.5px;}
+.mf-upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.mf-baseline{background:#1A1A00;border:1px solid #B08020;border-radius:10px;padding:16px;margin-bottom:16px;}
+.mf-baseline-title{font-size:10px;font-weight:700;color:#B08020;letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;}
+</style>
+</head>
+<body>
+
+<h1>FLOWMATRIX</h1>
+<div class="subtitle">ENGINE v3 &nbsp;·&nbsp; DIAGNOSTIC + MICROFIX &nbsp;·&nbsp; PERFORMANCE ARCHITECT USE ONLY &nbsp;·&nbsp; BIBLE-COMPLIANT</div>
+
+<!-- STAGE SELECTOR -->
+<div class="section">
+  <div class="section-title">Select Stage</div>
+  <div class="stage-selector">
+    <button class="stage-btn active" id="stage-diag" onclick="selectStage('diagnostic')">
+      <span class="stage-icon">🔍</span>
+      <span class="stage-title">DIAGNOSTIC</span>
+      <span class="stage-sub">Tier 1 · Reveals breakpoints · Produces Diagnostic Report + Baseline Block</span>
+    </button>
+    <button class="stage-btn" id="stage-mfix" onclick="selectStage('microfix')">
+      <span class="stage-icon">🔧</span>
+      <span class="stage-title">MICROFIX VALIDATION</span>
+      <span class="stage-sub">Tier 2 · Confirms fix held · Produces MicroFix Report + L3 Checklist</span>
+    </button>
+  </div>
+</div>
+
+<!-- SESSION META -->
+<div class="section">
+  <div class="section-title">Session Details</div>
+  <div class="row">
+    <div class="field"><label>Client</label>
+      <input type="text" id="client" placeholder="Client name or code"></div>
+    <div class="field"><label>Activity</label>
+      <input type="text" id="activity" placeholder="e.g. Tall Stack"></div>
+    <div class="field"><label>Date</label>
+      <input type="text" id="sdate" placeholder="e.g. 02 Jul 2026"></div>
+  </div>
+</div>
+
+<!-- DIAGNOSTIC INPUTS -->
+<div id="diag-inputs" class="mode-section active">
+  <div class="section">
+    <div class="section-title">Participant Data — Excel Upload</div>
+    <div class="upload-zone" id="diag-upload-zone"
+         onclick="document.getElementById('diag-file').click()"
+         ondragover="event.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="handleDiagDrop(event)">
+      <div id="diag-upload-label">📊 &nbsp;Drag &amp; drop Excel file · Sheets: Individual + Group</div>
+      <div class="hint">Appendix A (Individual Observation) + Appendix B (Group Quadrant)</div>
+    </div>
+    <input type="file" id="diag-file" accept=".xlsx,.xls" onchange="handleDiagFile(this.files[0])" style="display:none">
+  </div>
+  <div class="section">
+    <div class="section-title">Field App Log — Diagnostic Field App v4</div>
+    <textarea id="diag-field-log" placeholder="Paste session log from FlowMatrix Diagnostic Field App v4.
+Contains: PA-8 signals · Shadow Lens 1 · ASSIGN/MOVE events
+Note: Lens 2 ORG observations are now captured in MicroFix Field App only."></textarea>
+  </div>
+</div>
+
+<!-- MICROFIX INPUTS -->
+<div id="mfix-inputs" class="mode-section">
+  <div class="section">
+    <div class="mf-baseline">
+      <div class="mf-baseline-title">⚡ Diagnostic Baseline — Required</div>
+      <p class="hint" style="margin-bottom:10px;">Paste the Diagnostic Baseline Block generated at the end of the Diagnostic run for this client.</p>
+      <textarea id="mf-baseline-text" style="min-height:110px;font-size:11px;"
+        placeholder="=== DIAGNOSTIC BASELINE — FOR MICROFIX INPUT ===
+Client: [name]
+Date: [date]
+Confirmed Lever: [lever]
+Primary Sub-layer: [sub-layer] ([score]%)
+Shadow Patterns Observed: [AN·H] [VT·M] etc.
+MicroFix Recommended: [Fix1] / [Fix2]
+=== END BASELINE ==="></textarea>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">Appendix K — Excel Upload</div>
+    <div class="upload-zone" id="mf-k-zone"
+         onclick="document.getElementById('mf-k-file').click()"
+         ondragover="event.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="handleMFKDrop(event)">
+      <div id="mf-k-label">📊 &nbsp;Upload Appendix K Excel · K_OA through Ke scores</div>
+    </div>
+    <input type="file" id="mf-k-file" accept=".xlsx,.xls" onchange="handleMFKFile(this.files[0])" style="display:none">
+  </div>
+  <div class="section">
+    <div class="section-title">Mentimeter Exports — Excel format from Mentimeter</div>
+    <div class="mf-upload-grid">
+      <div>
+        <label style="font-size:11px;color:#B08020;display:block;margin-bottom:6px;">K-IR · Individual Review (Slides 1+2 ratings)</label>
+        <div class="upload-zone" style="padding:14px;" id="mf-ir-zone" onclick="document.getElementById('mf-ir-file').click()">
+          <div id="mf-ir-label" style="font-size:12px;">📋 Upload K-IR Excel export</div>
+        </div>
+        <input type="file" id="mf-ir-file" accept=".xlsx,.xls,.csv" onchange="handleMFIRFile(this.files[0])" style="display:none">
+      </div>
+      <div>
+        <label style="font-size:11px;color:#B08020;display:block;margin-bottom:6px;">K-GCR · Group Collective Review</label>
+        <div class="upload-zone" style="padding:14px;" id="mf-gcr-zone" onclick="document.getElementById('mf-gcr-file').click()">
+          <div id="mf-gcr-label" style="font-size:12px;">📋 Upload K-GCR Excel export</div>
+        </div>
+        <input type="file" id="mf-gcr-file" accept=".xlsx,.xls,.csv" onchange="handleMFGCRFile(this.files[0])" style="display:none">
+      </div>
+      <div>
+        <label style="font-size:11px;color:#B08020;display:block;margin-bottom:6px;">K-GQ · Group Quadrant</label>
+        <div class="upload-zone" style="padding:14px;" id="mf-gq-zone" onclick="document.getElementById('mf-gq-file').click()">
+          <div id="mf-gq-label" style="font-size:12px;">📋 Upload K-GQ Excel export</div>
+        </div>
+        <input type="file" id="mf-gq-file" accept=".xlsx,.xls,.csv" onchange="handleMFGQFile(this.files[0])" style="display:none">
+      </div>
+      <div>
+        <label style="font-size:11px;color:#B08020;display:block;margin-bottom:6px;">Evaluation Form — Tally CSV export</label>
+        <div class="upload-zone" style="padding:14px;" id="mf-eval-zone" onclick="document.getElementById('mf-eval-file').click()">
+          <div id="mf-eval-label" style="font-size:12px;">📋 Upload Evaluation Form CSV</div>
+        </div>
+        <input type="file" id="mf-eval-file" accept=".csv,.xlsx" onchange="handleMFEvalFile(this.files[0])" style="display:none">
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">MicroFix Field App Log</div>
+    <textarea id="mf-field-log" placeholder="Paste session log from FlowMatrix MicroFix Field App v1.
+Contains: MicroFix PA-8 signals · Shadow Lens 1 · Org Dynamics Lens 2 · External Markers"></textarea>
+  </div>
+</div>
+
+<!-- CALCULATE -->
+<div class="section" style="padding:14px;">
+  <button class="calc-btn" id="calc-btn" onclick="runEngine()">▶ &nbsp;RUN ENGINE</button>
+  <div id="error-display" class="error-box" style="display:none;"></div>
+</div>
+
+<!-- OUTPUT -->
+<div class="section" id="output-section" style="display:none;">
+  <div class="section-title">
+    <span id="output-title">Output</span>
+    <span class="info-badge">Copy full output → paste into Claude for report</span>
+  </div>
+  <div class="out-wrap">
+    <div class="out-nav" id="out-nav"></div>
+    <div class="out-content" id="out-content"></div>
+    <div class="copy-row">
+      <button class="copy-btn" onclick="copyFull()">COPY FULL OUTPUT</button>
+      <button class="copy-btn alt" onclick="copySection()">COPY CURRENT SECTION</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+
+// ================================================================
+// STAGE SELECTOR
+// ================================================================
+let currentStage = 'diagnostic';
+let diagExcelData = null;
+
+function selectStage(stage){
+  currentStage=stage;
+  document.getElementById('stage-diag').classList.toggle('active',stage==='diagnostic');
+  document.getElementById('stage-mfix').classList.toggle('active',stage==='microfix');
+  document.getElementById('diag-inputs').classList.toggle('active',stage==='diagnostic');
+  document.getElementById('mfix-inputs').classList.toggle('active',stage==='microfix');
+  document.getElementById('output-title').textContent=stage==='diagnostic'?'Diagnostic Output':'MicroFix Output';
+  document.getElementById('output-section').style.display='none';
+}
+
+// DIAGNOSTIC FILE HANDLER
+function handleDiagDrop(ev){ev.preventDefault();document.getElementById('diag-upload-zone').classList.remove('drag');const f=ev.dataTransfer.files[0];if(f)handleDiagFile(f);}
+function handleDiagFile(f){
+  if(!f) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      diagExcelData=wb;
+      document.getElementById('diag-upload-label').textContent='✓  '+f.name+'  (sheets: '+wb.SheetNames.join(', ')+')';
+      document.getElementById('diag-upload-zone').classList.add('loaded');
+    }catch(err){showError('Could not read Excel: '+err.message);}
+  };
+  reader.readAsArrayBuffer(f);
+}
+
+// ROUTING TABLES — BIBLE-COMPLIANT EMBEDDED
+// ================================================================
+
+// RT2 — Statement code to sub-layer
+// Code format: section.position where position 1=Overall(gate), 2=a, 3=b, 4=c
+const RT2 = {
+  // S1 FRICTION
+  '1.1':{type:'gate', layer:'Friction', sub:'Friction_General',     lever:'Decisions/Roles/Flow'},
+  '1.2':{type:'sub',  layer:'Friction', sub:'Decision_Friction',    lever:'Decisions'},
+  '1.3':{type:'sub',  layer:'Friction', sub:'Role_Friction',        lever:'Roles'},
+  '1.4':{type:'sub',  layer:'Friction', sub:'Flow_Friction',        lever:'Flow'},
+  // S2 DRIFT
+  '2.1':{type:'gate', layer:'Drift',    sub:'Drift_General',        lever:'Rules/Roles'},
+  '2.2':{type:'sub',  layer:'Drift',    sub:'Intent_Drift',         lever:'Rules/Decisions'},
+  '2.3':{type:'sub',  layer:'Drift',    sub:'Logic_Drift',          lever:'Rules/Flow'},
+  '2.4':{type:'sub',  layer:'Drift',    sub:'Role_Drift',           lever:'Roles'},
+  // S3 FRAGMENTATION
+  '3.1':{type:'gate', layer:'Fragmentation',sub:'Fragmentation_General',lever:'Decisions/Roles/Power'},
+  '3.2':{type:'sub',  layer:'Fragmentation',sub:'Decision_Fragmentation',lever:'Decisions'},
+  '3.3':{type:'sub',  layer:'Fragmentation',sub:'Role_Fragmentation',lever:'Roles'},
+  '3.4':{type:'sub',  layer:'Fragmentation',sub:'Leadership_Fragmentation',lever:'Power',shadow:true},
+  // S4 FRACTURE
+  '4.1':{type:'gate', layer:'Fracture', sub:'Fracture_General',     lever:'Roles/Decisions/Power'},
+  '4.2':{type:'sub',  layer:'Fracture', sub:'Role_Fracture',        lever:'Roles/Power'},
+  '4.3':{type:'sub',  layer:'Fracture', sub:'Decision_Fracture',    lever:'Decisions/Power'},
+  '4.4':{type:'sub',  layer:'Fracture', sub:'Trust_Fracture',       lever:'Power/Constraints',shadow:true},
+  // S5 COLLAPSE
+  '5.1':{type:'gate', layer:'Collapse', sub:'Collapse_General',     lever:'Decisions/Roles/Flow'},
+  '5.2':{type:'sub',  layer:'Collapse', sub:'Decision_Collapse',    lever:'Decisions'},
+  '5.3':{type:'sub',  layer:'Collapse', sub:'Role_Collapse',        lever:'Roles'},
+  '5.4':{type:'sub',  layer:'Collapse', sub:'Information_Collapse', lever:'Flow'},
+  // S6 BREAK
+  '6.1':{type:'gate', layer:'Break',    sub:'Break_General',        lever:'Power/Constraints'},
+  '6.2':{type:'sub',  layer:'Break',    sub:'Conflict',             lever:'Power',shadow:true},
+  '6.3':{type:'sub',  layer:'Break',    sub:'Chaos',               lever:'Constraints/Flow'},
+  '6.4':{type:'sub',  layer:'Break',    sub:'Overdrive',           lever:'Constraints/Rules'},
+  // S7 SYSTEM (keep per your instructions)
+  '7.1':{type:'system',layer:'System',  sub:'Decision_System',      lever:'Decisions'},
+  '7.2':{type:'system',layer:'System',  sub:'Information_Flow_System',lever:'Flow'},
+  '7.3':{type:'system',layer:'System',  sub:'Role_Clarity_System',  lever:'Roles'},
+  '7.4':{type:'system',layer:'System',  sub:'Pressure_Response_System',lever:'Constraints'},
+  // S8 PERSONAL — REVERSE SCORED (keep per your instructions)
+  '8.1':{type:'reverse',layer:'Personal',sub:'Role_Experience',     lever:'Roles'},
+  '8.2':{type:'reverse',layer:'Personal',sub:'Decision_Experience', lever:'Decisions'},
+  '8.3':{type:'reverse',layer:'Personal',sub:'Flow_Experience',     lever:'Flow'},
+  '8.4':{type:'reverse',layer:'Personal',sub:'Pressure_Experience', lever:'Constraints'},
+};
+
+// RT1 — Sub-layer to Fix (Bible-complete)
+const RT1 = {
+  'Decision_Friction':          {fix1:'Pathway', fix2:'Anchor',   system:'Decision_System',       threshold:'Strong'},
+  'Role_Friction':              {fix1:'Boundary',fix2:'Protocol', system:'Role_Clarity_System',   threshold:'Strong'},
+  'Flow_Friction':              {fix1:'Handoff', fix2:'Signal',   system:'Information_Flow_System',threshold:'Moderate'},
+  'Intent_Drift':               {fix1:'Anchor',  fix2:'Protocol', system:'Expectation_System',    threshold:'Strong'},
+  'Logic_Drift':                {fix1:'Protocol',fix2:'Check',    system:'Expectation_System',    threshold:'Strong'},
+  'Role_Drift':                 {fix1:'Boundary',fix2:'Check',    system:'Role_Clarity_System',   threshold:'Moderate'},
+  'Decision_Fragmentation':     {fix1:'Pathway', fix2:'Protocol', system:'Decision_System',       threshold:'Strong'},
+  'Role_Fragmentation':         {fix1:'Boundary',fix2:'Handoff',  system:'Role_Clarity_System',   threshold:'Strong'},
+  'Leadership_Fragmentation':   {fix1:'Anchor',  fix2:'Boundary', system:'Leadership_System',     threshold:'Acute'},
+  'Role_Fracture':              {fix1:'Boundary',fix2:'Anchor',   system:'Role_Clarity_System',   threshold:'Acute'},
+  'Decision_Fracture':          {fix1:'Pathway', fix2:'Anchor',   system:'Decision_System',       threshold:'Acute'},
+  'Trust_Fracture':             {fix1:'Anchor',  fix2:'Boundary', system:'Behavioural_System',    threshold:'Acute'},
+  'Decision_Collapse':          {fix1:'Pathway', fix2:'Anchor',   system:'Decision_System',       threshold:'Acute'},
+  'Role_Collapse':              {fix1:'Boundary',fix2:'Protocol', system:'Role_Clarity_System',   threshold:'Acute'},
+  'Information_Collapse':       {fix1:'Signal',  fix2:'Handoff',  system:'Information_Flow_System',threshold:'Acute'},
+  'Conflict':                   {fix1:'Anchor',  fix2:'Boundary', system:'Behavioural_System',    threshold:'Acute'},
+  'Chaos':                      {fix1:'Protocol',fix2:'Handoff',  system:'Pressure_Response_System',threshold:'Acute'},
+  'Overdrive':                  {fix1:'Protocol',fix2:'Check',    system:'Pressure_Response_System',threshold:'Acute'},
+  // System layer
+  'Decision_System':            {fix1:'Pathway', fix2:'Protocol', system:'Decision_System',       threshold:'Strong'},
+  'Information_Flow_System':    {fix1:'Signal',  fix2:'Handoff',  system:'Information_Flow_System',threshold:'Strong'},
+  'Role_Clarity_System':        {fix1:'Boundary',fix2:'Protocol', system:'Role_Clarity_System',   threshold:'Strong'},
+  'Pressure_Response_System':   {fix1:'Protocol',fix2:'Weight',   system:'Pressure_Response_System',threshold:'Strong'},
+  'Accountability_System':      {fix1:'Protocol',fix2:'Check',    system:'Accountability_System', threshold:'Strong'},
+  'Expectation_System':         {fix1:'Protocol',fix2:'Anchor',   system:'Expectation_System',    threshold:'Strong'},
+  'Leadership_System':          {fix1:'Anchor',  fix2:'Pathway',  system:'Leadership_System',     threshold:'Acute'},
+  'Behavioural_System':         {fix1:'Anchor',  fix2:'Protocol', system:'Behavioural_System',    threshold:'Strong'},
+};
+
+// Compound sequencing (Bible RT1)
+const COMPOUND_SEQ = {
+  A:{levers:['Decisions','Roles'],      fixes:['Anchor','Boundary','Pathway'], when:'Decision and Role breakdown co-primary'},
+  B:{levers:['Flow','Rules'],           fixes:['Handoff','Signal','Check'],    when:'Flow and Information breakdown co-primary'},
+  C:{levers:['Rules','Constraints'],    fixes:['Protocol','Check','Anchor'],   when:'Drift and Standards breakdown co-primary'},
+  D:{levers:['Power','Rules','Incentives'],fixes:['Anchor','Protocol','Weight'],when:'Power and Behavioural breakdown co-primary'},
+};
+
+// RT3 — Group Quadrant phrases (Bible-complete with worked/not-worked + absence)
+const RT3_NOT_WORKED = {
+  'It was not clear who should decide':
+    {layer:'Collapse',sub:'Decision_Collapse',lever:'Decisions',fix:'Pathway',shadow:false},
+  'We kept second-guessing each other':
+    {layer:'Friction',sub:'Decision_Friction',lever:'Decisions',fix:'Pathway / Anchor',shadow:false},
+  'Different people were pulling in different directions':
+    {layer:'Fragmentation',sub:'Leadership_Fragmentation',lever:'Power',fix:'Anchor / Boundary',shadow:true},
+  'We misunderstood each other':
+    {layer:'Fracture',sub:'Trust_Fracture',lever:'Flow / Power',fix:'Handoff / Signal',shadow:true},
+  'Things got lost when passing from one person to another':
+    {layer:'Fracture',sub:'Role_Fracture',lever:'Flow / Roles',fix:'Handoff / Boundary',shadow:false},
+  'We had to keep asking for the same information':
+    {layer:'Collapse',sub:'Information_Collapse',lever:'Flow',fix:'Signal',shadow:false},
+  'We rushed and made mistakes':
+    {layer:'Break',sub:'Overdrive',lever:'Constraints / Rules',fix:'Protocol / Check',shadow:false},
+  'We fell apart when the pressure increased':
+    {layer:'Break',sub:'Chaos',lever:'Constraints',fix:'Protocol',shadow:false},
+  'We cut corners or skipped steps under pressure':
+    {layer:'Drift',sub:'Logic_Drift',lever:'Rules',fix:'Protocol / Check',shadow:false},
+  'It was not clear who owned what':
+    {layer:'Collapse',sub:'Role_Collapse',lever:'Roles',fix:'Boundary / Protocol',shadow:false},
+  "Things fell between people — nobody\'s job":
+    {layer:'Fracture',sub:'Role_Fracture',lever:'Roles',fix:'Boundary / Handoff',shadow:false},
+  'When something went wrong it was hard to know whose responsibility it was':
+    {layer:'Fracture',sub:'Trust_Fracture',lever:'Roles / Power',fix:'Boundary / Anchor',shadow:true},
+};
+
+const RT3_WORKED = {
+  'Direction was clear':
+    {system:'Decision_System',lever:'Decisions',strength:'Decision architecture functioning'},
+  'Decisions were made when needed':
+    {system:'Decision_System',lever:'Decisions',strength:'Decision pathway active'},
+  'Everyone understood the priorities':
+    {system:'Expectation_System',lever:'Rules',strength:'Expectation architecture functioning'},
+  'Information reached the right people at the right time':
+    {system:'Information_Flow_System',lever:'Flow',strength:'Signal architecture functioning'},
+  'Handoffs between people were clean':
+    {system:'Information_Flow_System',lever:'Flow',strength:'Handoff architecture functioning'},
+  'Instructions were clear enough to act on':
+    {system:'Expectation_System',lever:'Rules',strength:'Protocol architecture holding'},
+  'We stayed composed when things got difficult':
+    {system:'Pressure_Response_System',lever:'Constraints',strength:'Pressure response architecture functioning'},
+  'We adapted when our first approach was not working':
+    {system:'Pressure_Response_System',lever:'Constraints',strength:'Adaptive architecture functioning'},
+  'We followed the rules even when it was hard':
+    {system:'Expectation_System',lever:'Rules',strength:'Rules architecture holding under pressure'},
+  'Everyone knew what was theirs to do':
+    {system:'Role_Clarity_System',lever:'Roles',strength:'Role boundary architecture functioning'},
+  'Responsibilities were clear in practice not just in theory':
+    {system:'Role_Clarity_System',lever:'Roles',strength:'Role clarity architecture functioning'},
+  'We held each other to account':
+    {system:'Accountability_System',lever:'Rules',strength:'Accountability architecture functioning'},
+};
+
+// Key combinations for high-certainty diagnosis (Bible RT3)
+const RT3_KEY_COMBOS = [
+  {phrases:['Things got lost when passing from one person to another','We had to keep asking for the same information'],
+   diagnosis:'Flow_Fracture confirmed',lever:'Flow',fix:'Handoff primary'},
+  {phrases:['It was not clear who should decide','It was not clear who owned what'],
+   diagnosis:'Decision + Role Collapse co-primary',lever:'Decisions + Roles',fix:'Pathway + Boundary'},
+  {phrases:['We rushed and made mistakes','We fell apart when the pressure increased'],
+   diagnosis:'Break_Overdrive confirmed',lever:'Constraints',fix:'Protocol primary'},
+  {phrases:["Different people were pulling in different directions",'When something went wrong it was hard to know whose responsibility it was'],
+   diagnosis:'Leadership_Fragmentation + Trust_Fracture',lever:'Power + Roles',fix:'Anchor + Boundary'},
+];
+
+// RT5 — External Markers (Bible-complete including Incentives)
+const RT5 = {
+  'Decisions':    {healthy:'Navigator',broken:'Drifter',
+    compound:'Sequence_A',shadow:'Possible_Veto_or_Mirror',
+    frame:'Direction kept shifting — not because anyone chose to drift, but because the system had no fixed reference point to return to when pressure hit.',
+    strength_frame:'When direction was clear — even briefly — teams moved with confidence.'},
+  'Roles':        {healthy:'Builder',broken:'Isolator',
+    compound:'Sequence_A',shadow:'Possible_Exile',
+    frame:'Individual output was strong. The gap was at the interface — the design between roles had no defined handoff, so work stopped precisely where it needed to pass.',
+    strength_frame:'Individual capability was strong. Output was produced when the interface was clear.'},
+  'Flow':         {healthy:'Connector/Checker',broken:'Bottleneck/Gatekeeper',
+    compound:'Sequence_B',shadow:'Possible_Broker',
+    frame:'Information existed but did not travel. The system had no designed signal to move critical data to the right person at the right moment.',
+    strength_frame:'Information travelled. When the signal was designed, it reached the right person.'},
+  'Power':        {healthy:'Resolver',broken:'Overtaker',
+    compound:'Sequence_D',shadow:'Possible_Anchor_or_Veto',
+    frame:'The system had no decision pathway — so the vacuum was filled by whoever was willing to decide. This is not a dominance problem. It is a design problem. The fix is the pathway, not the person.',
+    strength_frame:'Deadlocks were broken. The team could converge when a route was available.'},
+  'Rules':        {healthy:'Anchor/Checker',broken:'Rigid/Gatekeeper',
+    compound:'Sequence_C',shadow:'None_typical',
+    frame:'The original intent was held — but when conditions changed, the system had no mechanism for legitimate adaptation. Holding the line and adjusting the line looked the same to the architecture.',
+    strength_frame:'Intent held under pressure — teams returned to the objective when reminded of it.'},
+  'Incentives':   {healthy:'Energiser',broken:'Accelerator',
+    compound:'Sequence_D',shadow:'Possible_Anchor',
+    frame:'Speed without direction. The system had no constraint architecture to calibrate pace — so pressure activated urgency rather than focus.',
+    strength_frame:'Momentum was recoverable. The team could respond to a challenge when direction was stable.'},
+  'Constraints':  {healthy:'Energiser',broken:'Accelerator',
+    compound:'Sequence_C',shadow:'None_typical',
+    frame:'Speed without direction. The system had no constraint architecture to calibrate pace under pressure.',
+    strength_frame:'Momentum was recoverable. The team could respond to a challenge when direction was stable.'},
+};
+
+// RT6 — Shadow Lens 1 codes and lever routing
+const RT6 = {
+  'AN':{name:'Anchor',lever:'Power / Decisions',
+    desc:'Real authority regardless of title. Room watches before acting.',
+    cooccur:'Leadership_Fragmentation absent when functioning — Decision System active',
+    fix:'Formalise into Pathway — design works with not around this person'},
+  'VT':{name:'Veto',lever:'Power / Decisions',
+    desc:'Quiet momentum kill. Things stall when this person goes quiet.',
+    cooccur:'Decision_Fracture / Decision_Collapse',
+    fix:'Pathway fix must give Veto a named role — bypassing creates resistance'},
+  'BK':{name:'Broker',lever:'Flow',
+    desc:'Controls information flow. Knows more than role should allow.',
+    cooccur:'Information_Collapse / Flow_Friction',
+    fix:'Signal fix — design information architecture that does not rely on single gatekeeper'},
+  'SH':{name:'Shield',lever:'Power / Roles',
+    desc:'Absorbs pressure on behalf of others. Takes blame not theirs.',
+    cooccur:'Trust_Fracture / Role_Collapse',
+    fix:'Boundary fix — redistribute accountability so Shield does not carry system failure alone'},
+  'MI':{name:'Mirror',lever:'Power',
+    desc:'Reflects dominant voice. Position changes after power speaks.',
+    cooccur:'Decision_Friction / Leadership_Fragmentation',
+    fix:'Anchor fix — Mirror behaviour resolves when Anchor is formalised'},
+  'EX':{name:'Exile',lever:'Roles / Flow',
+    desc:'Marginalised despite capability. Contributions not picked up.',
+    cooccur:'Role_Collapse / Information_Collapse',
+    fix:'Handoff fix — Signal fix — design must create a route for this person\'s contribution to enter'},
+  'HO':{name:'Hierarchy Override',lever:'Power / Rules',
+    desc:'Cultural or generational authority reverses room decisions outside.',
+    cooccur:'Trust_Fracture / Intent_Drift',
+    fix:'Protocol fix — decisions made in room need external ratification mechanism built in'},
+};
+
+// RT7 — Lens 2 ORG codes (private section only — single session = LOW confidence)
+const RT7 = {
+  'PT':{name:'Power Topology',   desc:'Real authority does not match org chart.',system:'Leadership_System'},
+  'UR':{name:'Unwritten Rule',   desc:'Norm everyone follows, nobody states.',system:'Expectation_System'},
+  'PS':{name:'Protected Story',  desc:'Narrative the organisation cannot challenge.',system:'Expectation_System'},
+  'IA':{name:'Informal Alliance',desc:'Relationship structure beneath the org chart.',system:'Leadership_System'},
+  'SF':{name:'Scapegoat Function',desc:'Carries the organisation\'s failure.',system:'Behavioural_System'},
+  'FM':{name:'Frozen Moment',    desc:'Past event still governing present behaviour.',system:'Expectation_System'},
+};
+
+// RT4 — K sheet validation (K1-K7)
+const RT4 = {
+  'Decisions': {sheet:'K1',
+    overall:'Decisions moved more clearly than before — less stopping and second-guessing',
+    ka:{fix:'Pathway',text:'It was clear who had the right to make each call — and they made it'},
+    kb:{fix:'Anchor', text:'When a decision was needed someone made it without the group stalling'},
+    kc:{fix:'Protocol',text:'We did not revisit the same decision more than once'},
+    kd:{recal:'Pathway',text:'There were still moments where no one was sure who should decide'},
+    ke:{recal:'Power/Leadership',text:'Different people were still pulling in different directions'},
+  },
+  'Roles':{sheet:'K2',
+    overall:'Everyone knew what was theirs to do — and stayed in it',
+    ka:{fix:'Boundary',text:'It was clear where my responsibility ended and someone else\'s began'},
+    kb:{fix:'Handoff', text:'Work passed between people without getting stuck or dropped'},
+    kc:{fix:'Protocol',text:'No one stepped into someone else\'s space — people owned their part'},
+    kd:{recal:'Boundary',text:'There were still moments where it was not clear who owned what'},
+    ke:{recal:'Role_Fracture',text:'Something still fell between people — no one\'s job'},
+  },
+  'Power':{sheet:'K3',
+    overall:'Direction felt more settled — there was a clearer sense of who was leading',
+    ka:{fix:'Anchor', text:'One clear direction held throughout — we were not pulled in different ways'},
+    kb:{fix:'Pathway',text:'When something was unclear there was a clear place to go for the answer'},
+    kc:{fix:'Boundary',text:'People stayed within their authority — no one overstepped without good reason'},
+    kd:{recal:'Anchor',text:'There were still competing voices — it was hard to know who to follow'},
+    ke:{recal:'Trust_Fracture/Shadow',text:'Someone still pulled back or disengaged when things got difficult'},
+  },
+  'Flow':{sheet:'K4',
+    overall:'Work moved more smoothly between people — less getting stuck at handoff points',
+    ka:{fix:'Handoff',text:'When I finished my part the next person knew it was ready and what to do with it'},
+    kb:{fix:'Signal', text:'Information reached the right people at the right time'},
+    kc:{fix:'Protocol',text:'We followed the sequence — things happened in the right order'},
+    kd:{recal:'Handoff',text:'There were still moments where something got lost when passing between people'},
+    ke:{recal:'Signal', text:'We still had to keep asking for the same information'},
+  },
+  'Rules':{sheet:'K5',
+    overall:'The rules held more consistently — less bending or forgetting under pressure',
+    ka:{fix:'Protocol',text:'Everyone interpreted and applied the rules the same way'},
+    kb:{fix:'Anchor', text:'The rules held even when things got difficult or the pressure increased'},
+    kc:{fix:'Check',  text:'We checked the rules when unsure rather than relying on memory'},
+    kd:{recal:'Protocol',text:'Steps were still skipped or the rules were still applied differently'},
+    ke:{recal:'Overdrive/Constraints',text:'We still cut corners when the pressure increased'},
+  },
+  'Incentives':{sheet:'K6',
+    overall:'People were pulling in the same direction — the team felt more aligned around what mattered',
+    ka:{fix:'Weight', text:'What the team was rewarded for and what the task required felt aligned'},
+    kb:{fix:'Signal', text:'When someone did the right thing it was visible and recognised by the group'},
+    kc:{fix:'Protocol',text:'The team held each other to the standard — not just individually'},
+    kd:{recal:'Weight',text:'There were still moments where individual priorities overrode team priorities'},
+    ke:{recal:'Weight',text:'Doing the right thing for the team still felt less rewarded than easiest individually'},
+  },
+  'Constraints':{sheet:'K7',
+    overall:'The team stayed composed under pressure — less rushing and fewer mistakes',
+    ka:{fix:'Protocol',text:'When the pressure increased we adapted without the team falling apart'},
+    kb:{fix:'Weight', text:'We stayed within what was actually possible — we did not overcommit'},
+    kc:{fix:'Check',  text:'When something went wrong we stopped, recalibrated and moved forward'},
+    kd:{recal:'Protocol',text:'There were still moments where we rushed and made mistakes'},
+    ke:{recal:'Break/Protocol',text:'We still fell apart when the pressure peaked'},
+  },
+};
+
+// Field App sub-layer codes
+const FA_SUB_MAP = {
+  'Ro-Fr':'Role_Friction',      'De-Fr':'Decision_Friction',    'Fl-Fr':'Flow_Friction',
+  'In-Dr':'Intent_Drift',       'Lo-Dr':'Logic_Drift',           'Ro-Dr':'Role_Drift',
+  'De-Fg':'Decision_Fragmentation','Ro-Fg':'Role_Fragmentation', 'Le-Fg':'Leadership_Fragmentation',
+  'Ro-Fc':'Role_Fracture',      'De-Fc':'Decision_Fracture',     'Tr-Fc':'Trust_Fracture',
+  'De-Co':'Decision_Collapse',  'Ro-Co':'Role_Collapse',         'In-Co':'Information_Collapse',
+  'Co-Br':'Conflict',           'Ch-Br':'Chaos',                 'Ov-Br':'Overdrive',
+};
+const FA_LAYER_MAP = {
+  'FR':'Friction','DR':'Drift','FG':'Fragmentation',
+  'FC':'Fracture','CO':'Collapse','BR':'Break',
+};
+
+function signalLevel(pct){
+  if(pct<25) return 'Not present';
+  if(pct<41) return 'Mild';
+  if(pct<61) return 'Moderate';
+  if(pct<76) return 'Strong';
+  return 'ACUTE';
+}
+
+// ================================================================
+// EXCEL PARSER — INDIVIDUAL SHEET (Appendix A)
+// ================================================================
+function parseIndividual(wb){
+  const ws = wb.Sheets['Individual'] || wb.Sheets[wb.SheetNames[0]];
+  if(!ws) return null;
+  const rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+
+  // Row index 2 (R3): group names starting col 3 (D)
+  // Row index 3 (R4): participant names / "Total" / "Scale" headers
+  // Data rows start index 5 (R6) onwards
+  const groupRow = rows[2] || [];
+  const nameRow  = rows[3] || [];
+
+  let groups = {}; // {groupName:[{col,name}]}
+  let currentGroup = null;
+  for(let c=3; c<groupRow.length; c++){
+    const v = groupRow[c];
+    if(v && typeof v==='string' && v.trim() &&
+       !v.toLowerCase().includes('total') && !v.toLowerCase().includes('scale')){
+      currentGroup = v.trim();
+      if(!groups[currentGroup]) groups[currentGroup]=[];
+    }
+    if(currentGroup){
+      const pName = nameRow[c];
+      if(pName && typeof pName==='string' && pName.trim() &&
+         !pName.toLowerCase().includes('total') &&
+         !pName.toLowerCase().includes('scale') &&
+         !pName.toLowerCase().includes('grand')){
+        groups[currentGroup].push({col:c,name:pName.trim()});
+      }
+    }
+  }
+
+  // Gate tracking per section
+  let sectionGates = {}; // section number -> gate pct per group
+  let statements = {};   // code -> {groupName:[scores]}
+  let openQuestions = [];
+  let outliers = [];
+
+  for(let r=4; r<rows.length; r++){
+    const row = rows[r];
+    if(!row) continue;
+    const code = row[0];
+    if(code===null||code===undefined) continue;
+    const codeStr = String(code).trim();
+    if(!codeStr || codeStr.length===0) continue;
+
+    // Section header rows — skip
+    if(typeof code==='string' && isNaN(parseFloat(code))){
+      // Check for open question row
+      if(codeStr.toLowerCase().includes('open question') ||
+         codeStr.toLowerCase().includes('moment')){
+        // Next rows are open question responses
+        for(let rr=r+1; rr<Math.min(r+30,rows.length); rr++){
+          const qrow = rows[rr];
+          if(!qrow) continue;
+          // Response rows: col 0 = participant number, participant columns have text
+          for(const [grp,parts] of Object.entries(groups)){
+            for(const p of parts){
+              const txt = qrow[p.col];
+              if(txt && typeof txt==='string' && txt.trim().length>3){
+                openQuestions.push({
+                  name:p.name, group:grp,
+                  text:txt.trim()
+                });
+              }
+            }
+          }
+        }
+      }
+      continue;
+    }
+
+    const codeNum = parseFloat(codeStr);
+    if(isNaN(codeNum)) continue;
+
+    const rt = RT2[codeStr];
+    if(!rt) continue;
+
+    statements[codeStr] = {};
+    const section = Math.floor(codeNum);
+    const isGate = rt.type==='gate';
+
+    for(const [grp,participants] of Object.entries(groups)){
+      const scores = participants.map(p=>{
+        const v = row[p.col];
+        return (v!==null&&v!==undefined&&!isNaN(Number(v)))?Number(v):null;
+      }).filter(v=>v!==null);
+
+      if(scores.length===0) continue;
+      statements[codeStr][grp] = scores;
+
+      // Gate calculation
+      if(isGate){
+        const total = scores.reduce((a,b)=>a+b,0);
+        const max   = scores.length*4;
+        const pct   = max>0?Math.round(total/max*100):0;
+        if(!sectionGates[section]) sectionGates[section]={};
+        sectionGates[section][grp] = pct;
+      }
+
+      // Outlier detection per sub-score
+      if(!isGate && scores.length>=2){
+        const mean = scores.reduce((a,b)=>a+b,0)/scores.length;
+        participants.forEach((p,pi)=>{
+          const sc = statements[codeStr][grp][pi];
+          if(sc!==undefined && Math.abs(sc-mean)>=2){
+            outliers.push({
+              code:codeStr, group:grp, name:p.name,
+              score:sc, mean:Math.round(mean*10)/10,
+              direction: sc>mean?'High outlier':'Low outlier',
+              shadow: rt.shadow||false
+            });
+          }
+        });
+      }
+    }
+  }
+
+  return {groups,statements,sectionGates,openQuestions,outliers};
+}
+
+// ================================================================
+// EXCEL PARSER — GROUP SHEET (Appendix B)
+// ================================================================
+function parseGroup(wb){
+  const ws = wb.Sheets['Group'] || wb.Sheets[wb.SheetNames[1]];
+  if(!ws) return null;
+  const rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+
+  // Row 2 (index 2): group names in cols B-E
+  const groupRow = rows[2]||[];
+  const groupNames = [groupRow[1],groupRow[2],groupRow[3],groupRow[4]]
+    .map(g=>g?g.toString().trim():null).filter(Boolean);
+
+  let ticked  = {}; // phrase -> [groups]
+  let circled = {}; // phrase -> {group: W|X} (from Top3 section)
+  let worked  = []; // [{phrase,groups}]
+  let recurrence = null;
+  let currentDir = '';
+
+  for(let r=3; r<rows.length; r++){
+    const row = rows[r];
+    const col0 = row[0]?row[0].toString().trim():'';
+    if(!col0) continue;
+
+    // Recurrence flag
+    if(col0.toLowerCase().includes('recurrence')){
+      const val = rows[r][5]||rows[r][1]||'';
+      recurrence = val.toString().toLowerCase().includes('yes')?'Yes':'No';
+      continue;
+    }
+
+    // Top 3 section — read free text entries with W: or X: prefix
+    if(col0.toUpperCase().startsWith('TOP 3')){
+      // Read the next rows for group top-3 entries
+      let g = -1;
+      for(let rr=r+1; rr<Math.min(r+25,rows.length); rr++){
+        const tr = rows[rr];
+        if(!tr) continue;
+        const tc0 = tr[0]?tr[0].toString().trim():'';
+        if(!tc0) continue;
+        // Group header line
+        const gMatch = tc0.toLowerCase().match(/group\s*(\d+)/);
+        if(gMatch){ g=parseInt(gMatch[1])-1; continue; }
+        // Entry line — 1., 2., 3. with text in col 1
+        const entryText = tr[1]?tr[1].toString().trim():'';
+        if(!entryText||g<0) continue;
+        // Parse W: or X: prefix
+        let dir = null;
+        let phrase = entryText;
+        if(entryText.startsWith('W:')||entryText.startsWith('w:')){
+          dir='WORKED'; phrase=entryText.slice(2).trim();
+        } else if(entryText.startsWith('X:')||entryText.startsWith('x:')){
+          dir='DID NOT WORK'; phrase=entryText.slice(2).trim();
+        }
+        if(phrase && g>=0 && g<groupNames.length){
+          const grp = groupNames[g];
+          if(!circled[phrase]) circled[phrase]={};
+          circled[phrase][grp] = dir||'UNKNOWN';
+        }
+      }
+      continue;
+    }
+
+    // Section headers
+    if(col0.startsWith('Q')) continue;
+    if(col0.includes('WORKED')||col0.includes('✓')){
+      currentDir = col0.includes('✗')||col0.includes('DID NOT')?'DID NOT WORK':'WORKED';
+      continue;
+    }
+    if(col0.includes('DID NOT')){ currentDir='DID NOT WORK'; continue; }
+
+    // Phrase row
+    const phrase = col0.replace(/^[☐✓✗]\s*/,'').trim();
+    if(!phrase||phrase.length<4) continue;
+
+    const grpsForPhrase = [];
+    for(let gi=0;gi<4;gi++){
+      const v=row[gi+1];
+      if(v&&(v===1||v==='1'||v===true)){
+        if(gi<groupNames.length) grpsForPhrase.push(groupNames[gi]);
+      }
+    }
+
+    if(grpsForPhrase.length>0){
+      ticked[phrase]={groups:grpsForPhrase, direction:currentDir};
+      if(currentDir==='WORKED') worked.push({phrase,groups:grpsForPhrase});
+    }
+  }
+
+  return {groupNames,ticked,circled,worked,recurrence};
+}
+
+// ================================================================
+// EXCEL PARSER — APPENDIX K (Tier 2)
+// ================================================================
+function parseAppendixK(wb){
+  const ws = wb.Sheets['AppendixK'];
+  if(!ws) return null;
+  const rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+
+  // R2: Active Lever in col 0/1
+  let activeLever = null;
+  const r1 = rows[1]||[];
+  for(let c=0;c<r1.length;c++){
+    const v=r1[c];
+    if(v&&v.toString().trim()&&!v.toString().toLowerCase().includes('active')&&
+       !v.toString().toLowerCase().includes('k sheet')){
+      const lv=v.toString().trim();
+      if(Object.keys(RT4).includes(lv)){ activeLever=lv; break; }
+    }
+  }
+  if(!activeLever){
+    // Try to detect from cell that has lever value
+    for(const row of rows.slice(0,4)){
+      for(const v of row){
+        if(v&&Object.keys(RT4).includes(v.toString().trim())){
+          activeLever=v.toString().trim(); break;
+        }
+      }
+      if(activeLever) break;
+    }
+  }
+
+  // Read scores from rows 5-10 (R6-R11, index 5-10)
+  // Col C-H = P1-P6, Col I = Group Avg
+  let kScores = {};
+  const kCodes = ['K_OA','Ka','Kb','Kc','Kd','Ke'];
+  for(let ri=5;ri<=10;ri++){
+    const row=rows[ri];
+    if(!row) continue;
+    const code=row[0]?row[0].toString().trim():'';
+    const kKey=kCodes[ri-5];
+    const avg=row[8]; // Col I
+    if(avg!==null&&avg!==undefined&&!isNaN(Number(avg))){
+      kScores[kKey]=Math.round(Number(avg)*100)/100;
+    }
+  }
+
+  return {activeLever, kScores};
+}
+
+// ================================================================
+// SCORING ENGINE
+// ================================================================
+function calcScores(parsed){
+  const {statements,sectionGates,groups} = parsed;
+  let globalTotals = {}; // sub -> {total,max,layer,lever,type}
+  let groupTotals  = {}; // grp -> sub -> {total,max,layer,lever,type}
+  let reverseScores= {}; // grp -> {sub:{avg}}
+
+  for(const grp of Object.keys(groups)){
+    groupTotals[grp]={};
+    reverseScores[grp]={};
+  }
+
+  for(const [code,groupScores] of Object.entries(statements)){
+    const rt=RT2[code];
+    if(!rt) continue;
+
+    const section=Math.floor(parseFloat(code));
+    const isGate=rt.type==='gate';
+    const isReverse=rt.type==='reverse';
+    const isSystem=rt.type==='system';
+
+    for(const [grp,scores] of Object.entries(groupScores)){
+      if(!scores||scores.length===0) continue;
+
+      // Gate check — if gate pct < 25 skip sub-scores for this section/group
+      if(!isGate&&!isReverse&&!isSystem){
+        const gatePct=(sectionGates[section]||{})[grp];
+        if(gatePct!==undefined&&gatePct<25) continue; // skip — gate failed
+      }
+
+      const total=scores.reduce((a,b)=>a+b,0);
+      const max=scores.length*4;
+
+      if(isReverse){
+        // Reverse: high score = positive. Store separately for S8 reporting.
+        if(!reverseScores[grp][rt.sub])
+          reverseScores[grp][rt.sub]={total:0,max:0,label:rt.sub};
+        reverseScores[grp][rt.sub].total+=total;
+        reverseScores[grp][rt.sub].max+=max;
+        continue;
+      }
+
+      if(isGate) continue; // gates do not contribute to sub-layer scores
+
+      // Normal sub or system
+      if(!globalTotals[rt.sub])
+        globalTotals[rt.sub]={total:0,max:0,layer:rt.layer,lever:rt.lever,type:rt.type||'sub'};
+      globalTotals[rt.sub].total+=total;
+      globalTotals[rt.sub].max+=max;
+
+      if(!groupTotals[grp][rt.sub])
+        groupTotals[grp][rt.sub]={total:0,max:0,layer:rt.layer,lever:rt.lever,type:rt.type||'sub'};
+      groupTotals[grp][rt.sub].total+=total;
+      groupTotals[grp][rt.sub].max+=max;
+    }
+  }
+
+  // Convert to pct
+  const toResult=(totals)=>{
+    let res={};
+    for(const [sub,d] of Object.entries(totals)){
+      const pct=d.max>0?Math.round(d.total/d.max*100):0;
+      res[sub]={...d,pct,signal:signalLevel(pct)};
+    }
+    return res;
+  };
+
+  const globalScores=toResult(globalTotals);
+  let groupScoresResult={};
+  for(const [grp,t] of Object.entries(groupTotals))
+    groupScoresResult[grp]=toResult(t);
+
+  // Reverse scores avg
+  for(const [grp,subs] of Object.entries(reverseScores)){
+    for(const [sub,d] of Object.entries(subs)){
+      if(!groupScoresResult[grp]) groupScoresResult[grp]={};
+      const avg=d.max>0?Math.round(d.total/d.max*100):0;
+      groupScoresResult[grp][sub]={...d,pct:avg,signal:signalLevel(avg),type:'reverse'};
+    }
+  }
+
+  return {globalScores,groupScores:groupScoresResult};
+}
+
+function findPrimaryLevers(scores){
+  let candidates=[];
+  for(const [sub,d] of Object.entries(scores)){
+    if(d.type==='reverse') continue;
+    if(d.pct>=41) candidates.push({sub,...d});
+  }
+  candidates.sort((a,b)=>b.pct-a.pct);
+  return candidates;
+}
+
+// ================================================================
+// GROUP QUADRANT ROUTER (RT3)
+// ================================================================
+function routeGroupQuadrant(groupData){
+  if(!groupData) return {notWorked:[],worked:[],circles:[],combos:[],recurrence:null,absence:[]};
+
+  let notWorked=[]; // from ticks
+  let worked=[];
+  let circles=[]; // from Top3 Step 2
+  let absence=[];
+
+  // Ticked phrases
+  for(const [phrase,data] of Object.entries(groupData.ticked)){
+    if(data.direction==='DID NOT WORK'){
+      const rt=RT3_NOT_WORKED[phrase];
+      if(rt) notWorked.push({phrase,...rt,groups:data.groups,weight:1,source:'tick'});
+    } else if(data.direction==='WORKED'){
+      const rt=RT3_WORKED[phrase];
+      if(rt) worked.push({phrase,...rt,groups:data.groups});
+    }
+  }
+
+  // Unticked healthy phrases = absence signals (weight 0.5)
+  for(const [phrase,rt] of Object.entries(RT3_WORKED)){
+    if(!groupData.ticked[phrase]){
+      absence.push({phrase,lever:rt.lever,system:rt.system,note:'Unticked healthy phrase — weak absence signal (0.5 weight). Requires RT2 confirmation.'});
+    }
+  }
+
+  // Step 2 circles — W: and X: prefixed (weight 3x)
+  for(const [phrase,groupDirs] of Object.entries(groupData.circled)){
+    for(const [grp,dir] of Object.entries(groupDirs)){
+      if(dir==='DID NOT WORK'||dir==='UNKNOWN'){
+        const rt=RT3_NOT_WORKED[phrase];
+        if(rt) circles.push({phrase,...rt,groups:[grp],weight:3,source:'circle_step2',dir});
+      } else if(dir==='WORKED'){
+        const rt=RT3_WORKED[phrase];
+        if(rt) circles.push({phrase,lever:rt.lever,strength:rt.strength,groups:[grp],weight:3,source:'circle_step2',dir:'WORKED'});
+      }
+    }
+  }
+
+  // Key combinations
+  const tickedPhrases=Object.keys(groupData.ticked)
+    .filter(p=>groupData.ticked[p].direction==='DID NOT WORK');
+  let combos=[];
+  for(const combo of RT3_KEY_COMBOS){
+    if(combo.phrases.every(p=>tickedPhrases.includes(p))){
+      combos.push(combo);
+    }
+  }
+
+  return {notWorked,worked,circles,combos,recurrence:groupData.recurrence,absence};
+}
+
+// ================================================================
+// FIELD LOG PARSER
+// ================================================================
+function parseFieldLog(text){
+  const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
+  let assigns={};   // name->group
+  let moves=[];     // [{ts,name,from,to}]
+  let pa8Events=[];
+  let shadowEvents=[];
+  let orgEvents=[];
+  let roomEvents=[];
+  let activities=[];
+  let meta={client:'',engagement:'',activity:''};
+
+  for(const line of lines){
+    if(line.startsWith('Client:'))     meta.client=line.replace('Client:','').trim();
+    if(line.startsWith('Engagement:')) meta.engagement=line.replace('Engagement:','').trim();
+    if(line.startsWith('Activity:'))   meta.activity=line.replace('Activity:','').trim();
+    if(line.startsWith('===')) continue;
+
+    // Activity marker: "── ACTIVITY: Tall Stack ──"
+    const actM=line.match(/──\s*ACTIVITY:\s*(.+?)\s*──/);
+    if(actM){ activities.push(actM[1].trim()); continue; }
+
+    // ASSIGN: "00:33 ASSIGN Shadi → G1" or "00:33 ASSIGN Shadi → Red Team"
+    const asnM=line.match(/^(\d+:\d+)\s+ASSIGN\s+(.+?)\s+→\s+(.+)$/);
+    if(asnM){ assigns[asnM[2].trim()]=asnM[3].trim(); continue; }
+
+    // MOVE: "04:07 MOVE Shadi G1→G2"
+    const movM=line.match(/^(\d+:\d+)\s+MOVE\s+(.+?)\s+(\S+)→(\S+)$/);
+    if(movM){ moves.push({ts:movM[1],name:movM[2].trim(),from:movM[3],to:movM[4]}); continue; }
+
+    // PA8: "00:03 G1 FR·Ro-Fr" or "00:03 Red Team FR·Ro-Fr" or "00:03 G1 FR"
+    const pa8M=line.match(/^(\d+:\d+)\s+(\S+)\s+([A-Z]{2})(?:·([A-Za-z\-]+))?$/);
+    if(pa8M&&FA_LAYER_MAP[pa8M[3]]){
+      pa8Events.push({
+        ts:pa8M[1], group:pa8M[2],
+        layerCode:pa8M[3], subCode:pa8M[4]||null,
+        layer:FA_LAYER_MAP[pa8M[3]],
+        sub:pa8M[4]?(FA_SUB_MAP[pa8M[4]]||pa8M[4]):null,
+      });
+      continue;
+    }
+
+    // Shadow: "02:09 G1 Ahmed Hassan(AhH) TL · AN·H"
+    // Name can be multi-word, role can be multi-word, group can be custom name
+    const shM=line.match(/^(\d+:\d+)\s+(\S+)\s+(.+?)\(([^)]+)\)(?:\s+[\w\s]+)?\s+·\s+([A-Z]{2,3})·([HML])$/);
+    if(shM){
+      shadowEvents.push({
+        ts:shM[1], group:shM[2],
+        name:shM[3].trim(), pfx:shM[4],
+        pattern:shM[5], conf:shM[6],
+      });
+      continue;
+    }
+
+    // ORG: "03:05 G1 ORG[PT·M]"
+    const orgM=line.match(/^(\d+:\d+)\s+(\S+)\s+ORG\[([A-Z]{2})·([HML])\]$/);
+    if(orgM){
+      orgEvents.push({ts:orgM[1],group:orgM[2],code:orgM[3],conf:orgM[4]});
+      continue;
+    }
+
+    // ROOM: "00:18 ROOM ↑"
+    const roomM=line.match(/^(\d+:\d+)\s+ROOM\s+(.+)$/);
+    if(roomM){ roomEvents.push({ts:roomM[1],symbol:roomM[2].trim()}); }
+  }
+
+  return {meta,assigns,moves,pa8Events,shadowEvents,orgEvents,roomEvents,activities};
+}
+
+// ================================================================
+// COMPARISON — Two Streams
+// ================================================================
+function compareStreams(globalScores,fieldData){
+  let confirmed=[], flagged=[], fieldOnly=[];
+
+  let fieldFreq={};
+  for(const ev of fieldData.pa8Events){
+    const key=ev.sub||ev.layer;
+    if(!fieldFreq[key]) fieldFreq[key]={count:0,layer:ev.layer,groups:new Set()};
+    fieldFreq[key].count++;
+    fieldFreq[key].groups.add(ev.group);
+  }
+
+  for(const [sub,d] of Object.entries(globalScores)){
+    if(d.pct<41||d.type==='reverse') continue;
+    const fc=fieldFreq[sub]||fieldFreq[d.layer]||null;
+    if(fc){
+      confirmed.push({sub,pct:d.pct,signal:d.signal,lever:d.lever,
+        fieldCount:fc.count,fieldGroups:[...fc.groups]});
+    } else if(d.pct>=61){
+      flagged.push({sub,pct:d.pct,signal:d.signal,lever:d.lever,
+        note:'Strong/Acute in participant data — not observed in field. Possible shadow protection or facilitator positioning gap.'});
+    }
+  }
+
+  for(const [key,fc] of Object.entries(fieldFreq)){
+    const inScores=globalScores[key];
+    if(!inScores||inScores.pct<41){
+      fieldOnly.push({key,count:fc.count,groups:[...fc.groups],
+        note:'Field observation not reflected in participant scores. Per RT5 contradiction protocol: field observation outweighs self-report.'});
+    }
+  }
+
+  return {confirmed,flagged,fieldOnly};
+}
+
+// ================================================================
+// RT4 — MICROFIX VALIDATION
+// ================================================================
+function runRT4(kData){
+  if(!kData||!kData.activeLever) return null;
+  const lever=kData.activeLever;
+  const rt=RT4[lever];
+  if(!rt) return null;
+  const sc=kData.kScores;
+
+  const overall=sc['K_OA']||0;
+  let verdict,color;
+  if(overall>=3.0){verdict='HOLD — MicroFix confirmed. Proceed to Tier 3 residency.';color='confirmed';}
+  else if(overall>=2.0){verdict='PARTIAL — Fix partially held. Review sub-scores below.';color='flagged';}
+  else{verdict='RECALIBRATE — Fix did not hold. Return to RT1 for redesign.';color='flagged';}
+
+  let subVerdict=[];
+  const kItems=[
+    {code:'Ka',data:rt.ka,type:'fix'},
+    {code:'Kb',data:rt.kb,type:'fix'},
+    {code:'Kc',data:rt.kc,type:'fix'},
+    {code:'Kd',data:rt.kd,type:'recal'},
+    {code:'Ke',data:rt.ke,type:'recal'},
+  ];
+  for(const item of kItems){
+    const avg=sc[item.code]||0;
+    if(item.type==='fix'){
+      subVerdict.push({code:item.code,fix:item.data.fix,avg,
+        status:avg>=3?'HOLDING':'BELOW THRESHOLD — review this fix element',
+        recal:avg<3});
+    } else {
+      subVerdict.push({code:item.code,recal:item.data.recal,avg,
+        status:avg>=2?'RECALIBRATION FLAG RAISED':'Clear',
+        flag:avg>=2});
+    }
+  }
+
+  const shadowFlag=(sc['Ke']||0)>=2;
+
+  return {lever,overall,verdict,color,subVerdict,shadowFlag,rt};
+}
+
+// ================================================================
+// OPEN QUESTION ROUTER (Bible RT2)
+// ================================================================
+function routeOpenQuestion(text){
+  const t=text.toLowerCase();
+  if(t.includes('stop')||t.includes('stuck')||t.includes('nobody moved'))
+    return {signal:'Fracture/Collapse',sub:'Role_Fracture/Decision_Collapse',confirm:'Check S4a or S5a score'};
+  if(t.includes('different')||t.includes('separate')||t.includes('own thing'))
+    return {signal:'Fragmentation',sub:'Decision_Fragmentation',confirm:'Confirm S3a score'};
+  if(t.includes('decide')||t.includes('nobody knew')||t.includes('who should'))
+    return {signal:'Collapse',sub:'Decision_Collapse',confirm:'Confirm S5a score'};
+  if(t.includes('tense')||t.includes('argument')||t.includes('blame')||t.includes('angry'))
+    return {signal:'Break/Conflict',sub:'Conflict',confirm:'Confirm S6a score — shadow read required'};
+  if(t.includes('chaotic')||t.includes('frantic')||t.includes('rushed'))
+    return {signal:'Break',sub:'Chaos/Overdrive',confirm:'Confirm S6b or S6c score'};
+  if(t.includes('lost track')||t.includes('moved away')||t.includes('forgot'))
+    return {signal:'Drift',sub:'Intent_Drift',confirm:'Confirm S2a score'};
+  if(t.includes('slow')||t.includes('drag')||t.includes('delayed'))
+    return {signal:'Friction',sub:'Decision_Friction/Flow_Friction',confirm:'Confirm S1a or S1c score'};
+  if(t.trim().length<10)
+    return {signal:'Trust_Fracture likely',sub:'Exile pattern or sensitive moment',confirm:'Cross-check RT5 — do not force'};
+  return null;
+}
+
+// ================================================================
+// OUTPUT FORMATTER
+// ================================================================
+function formatOutput(client,activity,sdate,mode,
+    excelParsed,fieldParsed,
+    globalScores,groupScores,
+    groupQData,comparison,
+    kResult){
+
+  sections={};
+  const pLevers=findPrimaryLevers(globalScores);
+  const primary=pLevers[0]||null;
+  const secondary=pLevers.length>1?pLevers[1]:null;
+
+  // Determine compound sequence
+  let compoundSeq=null;
+  if(primary&&secondary){
+    const pl=primary.lever.split('/')[0].trim();
+    const sl=secondary.lever.split('/')[0].trim();
+    for(const [seq,def] of Object.entries(COMPOUND_SEQ)){
+      if(def.levers.includes(pl)&&def.levers.includes(sl)){
+        compoundSeq={seq,def,primaryLever:pl,secondaryLever:sl};
+        break;
+      }
+    }
+  }
+
+  // ── HEADER ─────────────────────────────────────────────────
+  let header = [];
+  header.push('FLOWMATRIX DIAGNOSTIC OUTPUT');
+  header.push('For Claude thread — paste this entire block for report generation');
+  header.push('');
+  header.push('Client:      '+(client||'Not specified'));
+  header.push('Activity:    '+(activity||'Not specified'));
+  header.push('Date:        '+(sdate||'Not specified'));
+  header.push('Mode:        '+(mode==='t1'?'Diagnostic (Tier 1)':'MicroFix Validation (Tier 1 + Tier 2)'));
+  header.push('Engine:      FlowMatrix Diagnostic Engine v2 — Bible-Compliant');
+  header.push('');
+
+  if(fieldParsed&&Object.keys(fieldParsed.assigns).length>0){
+    header.push('PARTICIPANT GROUPS:');
+    const grpMap={};
+    for(const [name,grp] of Object.entries(fieldParsed.assigns)){
+      if(!grpMap[grp]) grpMap[grp]=[];
+      grpMap[grp].push(name);
+    }
+    for(const [grp,names] of Object.entries(grpMap)){
+      header.push('  '+grp+': '+names.join(', '));
+    }
+    if(fieldParsed.moves.length>0){
+      header.push('');
+      header.push('MID-SESSION MOVES:');
+      for(const m of fieldParsed.moves)
+        header.push('  '+m.ts+' '+m.name+' '+m.from+'→'+m.to);
+    }
+  }
+  sections['HEADER']=header.join('\n');
+
+  // ── SECTION 1: PARTICIPANT DATA ─────────────────────────────
+  let s1=[];
+  s1.push('SECTION 1 — PARTICIPANT DATA READ (Appendix A + B)');
+  s1.push('');
+
+  if(!excelParsed){
+    s1.push('No Excel data uploaded. Field observations only.');
+  } else {
+    // Gate summary
+    s1.push('GATE RESULTS (Overall anchor scores — must clear 25% for sub-scores to count):');
+    const sectionNames={1:'S1 Friction',2:'S2 Drift',3:'S3 Fragmentation',
+                        4:'S4 Fracture',5:'S5 Collapse',6:'S6 Break'};
+    for(const [sec,gatesByGrp] of Object.entries(excelParsed.sectionGates)){
+      if(!sectionNames[sec]) continue;
+      const entries=Object.entries(gatesByGrp).map(([g,p])=>g+': '+p+'%').join(' | ');
+      const allPass=Object.values(gatesByGrp).every(p=>p>=25);
+      s1.push('  '+sectionNames[sec]+' — '+entries+(allPass?' [GATE PASSED]':' [GATE FAILED — sub-scores excluded for failing groups]'));
+    }
+    s1.push('');
+
+    // Global signals
+    if(pLevers.length>0){
+      s1.push('GLOBAL PA-8 SIGNALS (all groups combined, sub-scores only):');
+      s1.push('');
+      for(const c of pLevers.slice(0,8)){
+        const rt1=RT1[c.sub]||{};
+        s1.push('  '+padR(c.signal+':',14)+' '+c.sub.replace(/_/g,' ')+' ('+c.pct+'%)');
+        s1.push('    Layer: '+c.layer+'  |  Lever: '+c.lever+'  |  System: '+(rt1.system||'—'));
+        if(rt1.fix1) s1.push('    Fix 1: '+rt1.fix1+'  |  Fix 2: '+(rt1.fix2||'—')+'  |  Threshold: '+rt1.threshold);
+        s1.push('');
+      }
+
+      s1.push('PRIMARY LEVER IDENTIFICATION:');
+      s1.push('  Primary sub-layer:  '+primary.sub.replace(/_/g,' ')+' ('+primary.pct+'% — '+primary.signal+')');
+      s1.push('  Primary lever:      '+primary.lever);
+      const rt1p=RT1[primary.sub]||{};
+      s1.push('  Primary fix:        '+((rt1p.fix1||'—')+' / '+(rt1p.fix2||'—')));
+      s1.push('  System:             '+(rt1p.system||'—'));
+      if(secondary){
+        s1.push('  Secondary sub-layer:'+secondary.sub.replace(/_/g,' ')+' ('+secondary.pct+'% — '+secondary.signal+')');
+        s1.push('  Secondary lever:    '+secondary.lever);
+      }
+
+      // RT5 External Marker
+      const primaryLever=primary.lever.split('/')[0].trim();
+      const rt5=RT5[primaryLever];
+      if(rt5){
+        s1.push('');
+        s1.push('EXTERNAL MARKER (RT5):');
+        s1.push('  Broken form:    '+rt5.broken);
+        s1.push('  Healthy form:   '+rt5.healthy);
+        s1.push('  Shadow link:    '+rt5.shadow);
+        s1.push('  Debrief frame:  "'+rt5.frame+'"');
+      }
+
+      // Compound sequence
+      if(compoundSeq){
+        s1.push('');
+        s1.push('COMPOUND SEQUENCE — '+compoundSeq.seq+':');
+        s1.push('  Levers: '+compoundSeq.primaryLever+' + '+compoundSeq.secondaryLever);
+        s1.push('  Fix order: '+compoundSeq.def.fixes.join(' → '));
+        s1.push('  When: '+compoundSeq.def.when);
+        s1.push('  Note: Maximum 3 MicroFixes per intervention.');
+      }
+    } else {
+      s1.push('No sub-layer signals above Moderate threshold. Review gate results — possible data quality issue or very low participant count.');
+    }
+
+    // System signals (S7)
+    const sysSigs=Object.entries(globalScores).filter(([s,d])=>d.type==='system'&&d.pct>=41);
+    if(sysSigs.length>0){
+      s1.push('');
+      s1.push('SYSTEM-LAYER SIGNALS (S7 — repeating patterns):');
+      for(const [sub,d] of sysSigs)
+        s1.push('  '+d.signal+': '+sub.replace(/_/g,' ')+' ('+d.pct+'%)  — Lever: '+d.lever);
+    }
+
+    // Per-group breakdown
+    s1.push('');
+    s1.push('PER-GROUP BREAKDOWN:');
+    for(const [grp,scores] of Object.entries(groupScores)){
+      s1.push('');
+      s1.push('  -- '+grp+' --');
+      const cands=findPrimaryLevers(scores);
+      if(cands.length===0){
+        s1.push('    No signals above Moderate threshold.');
+      } else {
+        for(const c of cands.slice(0,5)){
+          s1.push('    '+padR(c.signal,12)+' '+c.sub.replace(/_/g,' ')+' ('+c.pct+'%)  Lever: '+c.lever);
+        }
+      }
+      // S8 reverse scores
+      const revEntries=Object.entries(scores).filter(([s,d])=>d.type==='reverse');
+      if(revEntries.length>0){
+        s1.push('    Personal experience (S8 — reverse scored: high = POSITIVE):');
+        for(const [sub,d] of revEntries)
+          s1.push('      '+d.signal+': '+sub.replace(/_/g,' ')+' ('+d.pct+'%) '+(d.pct>=61?'[POSITIVE — system functioning in this area]':'[BELOW AVERAGE — note]'));
+      }
+    }
+
+    // What is working (healthy markers from RT5)
+    const healthyLevers=new Set();
+    if(groupQData&&groupQData.worked.length>0){
+      s1.push('');
+      s1.push('WHAT IS WORKING — System Strengths:');
+      for(const w of groupQData.worked){
+        const rt5lev=w.lever?RT5[w.lever.split('/')[0].trim()]:null;
+        s1.push('  [STRENGTH]  "'+w.phrase+'"  ('+w.groups.join(', ')+')');
+        s1.push('              '+w.strength);
+        if(rt5lev) s1.push('              '+rt5lev.strength_frame);
+        if(w.lever) healthyLevers.add(w.lever.split('/')[0].trim());
+      }
+      if(healthyLevers.size>0)
+        s1.push('  Note: These levers confirmed healthy — do not diagnose as broken: '+[...healthyLevers].join(', '));
+    }
+
+    // Group Quadrant signals
+    if(groupQData){
+      s1.push('');
+      s1.push('GROUP QUADRANT SIGNALS (Appendix B):');
+      if(groupQData.notWorked.length>0){
+        s1.push('');
+        s1.push('  TICKED — Did Not Work (weight: 1x):');
+        for(const c of groupQData.notWorked){
+          s1.push('  "'+c.phrase+'"  [Groups: '+c.groups.join(', ')+']');
+          s1.push('    Layer: '+c.layer+' | Sub: '+c.sub.replace(/_/g,' ')+' | Lever: '+c.lever+(c.shadow?' [SHADOW FLAG]':''));
+        }
+      }
+      if(groupQData.circles.length>0){
+        s1.push('');
+        s1.push('  CIRCLED — Step 2 Top 3 (weight: 3x — highest diagnostic input):');
+        for(const c of groupQData.circles){
+          if(c.dir==='WORKED'){
+            s1.push('  [W: WORKED] "'+c.phrase+'"  ['+c.groups.join(', ')+']  — strength confirmation 3x weight');
+          } else {
+            s1.push('  [X: DID NOT WORK] "'+c.phrase+'"  ['+c.groups.join(', ')+']');
+            if(c.sub) s1.push('    Layer: '+c.layer+' | Sub: '+c.sub.replace(/_/g,' ')+' | Lever: '+c.lever+(c.shadow?' [SHADOW FLAG]':''));
+          }
+        }
+      }
+      if(groupQData.combos.length>0){
+        s1.push('');
+        s1.push('  KEY COMBINATIONS (high-certainty diagnosis):');
+        for(const combo of groupQData.combos){
+          s1.push('  CONFIRMED: '+combo.diagnosis);
+          s1.push('    Lever: '+combo.lever+' | Fix: '+combo.fix);
+        }
+      }
+      if(groupQData.recurrence){
+        s1.push('');
+        s1.push('  RECURRENCE AFTER RESTART: '+groupQData.recurrence);
+        if(groupQData.recurrence==='Yes')
+          s1.push('    ADD: Constraints lever signal — Protocol + Check MicroFix both indicated.');
+      }
+      if(groupQData.absence.length>0&&groupQData.absence.length<=5){
+        s1.push('');
+        s1.push('  ABSENCE SIGNALS (unticked healthy phrases — 0.5 weight, needs RT2 confirmation):');
+        for(const a of groupQData.absence.slice(0,5))
+          s1.push('  "'+a.phrase+'" not ticked — '+a.note);
+      }
+    }
+
+    // Outliers
+    if(excelParsed.outliers&&excelParsed.outliers.length>0){
+      s1.push('');
+      s1.push('OUTLIER FLAGS (individual scores 2+ points from group mean):');
+      for(const o of excelParsed.outliers){
+        s1.push('  '+o.direction+': '+o.name+' / '+o.group+' on '+o.code+
+          ' (score: '+o.score+', group mean: '+o.mean+')'+(o.shadow?' [SHADOW READ RECOMMENDED]':''));
+      }
+    }
+  }
+
+  sections['S1 — PARTICIPANT DATA']=s1.join('\n');
+
+  // ── SECTION 2: FIELD OBSERVATIONS ──────────────────────────
+  let s2=[];
+  s2.push('SECTION 2 — FIELD OBSERVATION READ (Field App Log)');
+  s2.push('');
+
+  if(!fieldParsed){
+    s2.push('No field log pasted. Participant data only.');
+  } else {
+    // Activities
+    if(fieldParsed.activities.length>0){
+      s2.push('ACTIVITIES LOGGED: '+fieldParsed.activities.join(' → '));
+      s2.push('');
+    }
+
+    // PA-8
+    let layerFreq={};
+    for(const ev of fieldParsed.pa8Events){
+      const key=ev.sub||ev.layer;
+      if(!layerFreq[key]) layerFreq[key]={count:0,layer:ev.layer,sub:ev.sub,groups:new Set()};
+      layerFreq[key].count++;
+      layerFreq[key].groups.add(ev.group);
+    }
+    const sorted=Object.entries(layerFreq).sort((a,b)=>b[1].count-a[1].count);
+    if(sorted.length>0){
+      s2.push('PA-8 SIGNALS OBSERVED (field):');
+      for(const [key,d] of sorted){
+        const rt1=RT1[key]||{};
+        s2.push('  '+padR(key.replace(/_/g,' '),32)+' x'+d.count+'  groups: '+[...d.groups].join(', '));
+        if(rt1.fix1) s2.push('    Lever: '+(RT2[key]?RT2[key].lever:d.layer)+'  Fix: '+rt1.fix1+' / '+rt1.fix2);
+      }
+      s2.push('');
+    }
+
+    // Shadow (H and M only)
+    const highShadow=fieldParsed.shadowEvents.filter(e=>e.conf==='H'||e.conf==='M');
+    if(highShadow.length>0){
+      s2.push('SHADOW OBSERVATIONS (High/Medium confidence only — Low excluded per RT6):');
+      for(const s of highShadow){
+        const rt6=RT6[s.pattern]||{};
+        s2.push('  '+s.ts+'  '+s.group+'  '+s.name+'('+s.pfx+')');
+        s2.push('    Pattern: '+s.pattern+' ['+s.conf+'] — '+(rt6.name||s.pattern));
+        s2.push('    '+rt6.desc||'');
+        s2.push('    Lever co-occurrence: '+(rt6.lever||'—'));
+        s2.push('    Fix consideration: '+(rt6.fix||'—'));
+        if(s.conf==='M') s2.push('    Note: Medium confidence — supporting observation only. Flag for confirmation in next session.');
+      }
+      s2.push('');
+    }
+
+    // Room energy
+    if(fieldParsed.roomEvents.length>0){
+      s2.push('ROOM ENERGY READINGS:');
+      for(const r of fieldParsed.roomEvents)
+        s2.push('  '+r.ts+'  '+r.symbol);
+      s2.push('');
+    }
+  }
+
+  // Lens 2 ORG — private section only
+  if(fieldParsed&&fieldParsed.orgEvents.length>0){
+    s2.push('[PRIVATE FACILITATOR NOTE — NOT FOR CLIENT REPORT]');
+    s2.push('LENS 2 ORGANISATIONAL DYNAMICS:');
+    s2.push('Per Bible RT7: Single Tier 1 session = LOW confidence maximum for Lens 2.');
+    s2.push('These are hypotheses only. Record for future sessions. Do not include in client diagnostic.');
+    s2.push('');
+    for(const o of fieldParsed.orgEvents){
+      const rt7=RT7[o.code]||{};
+      s2.push('  '+o.ts+'  '+o.group+'  '+o.code+'['+o.conf+'] — '+(rt7.name||o.code));
+      s2.push('    '+rt7.desc||'');
+      s2.push('    System: '+(rt7.system||'—'));
+    }
+    s2.push('[END PRIVATE NOTE]');
+  }
+
+  sections['S2 — FIELD OBSERVATIONS']=s2.join('\n');
+
+  // ── SECTION 3: COMPARISON ───────────────────────────────────
+  let s3=[];
+  s3.push('SECTION 3 — STREAM COMPARISON');
+  s3.push('');
+
+  if(!comparison||(!excelParsed&&!fieldParsed)){
+    s3.push('Comparison requires both Excel data and Field App log. Only one stream provided.');
+  } else if(!excelParsed){
+    s3.push('Field observations only — no participant data to compare against.');
+  } else if(!fieldParsed||fieldParsed.pa8Events.length===0){
+    s3.push('Participant data only — no field observations to compare against.');
+  } else {
+    if(comparison.confirmed.length>0){
+      s3.push('CONFIRMED — Both streams agree (HIGH confidence):');
+      for(const c of comparison.confirmed){
+        s3.push('  [CONFIRMED] '+c.sub.replace(/_/g,' ')+
+          ' ('+c.pct+'% participant | x'+c.fieldCount+' field observations | groups: '+c.fieldGroups.join(',')+')');
+        s3.push('    Lever: '+c.lever);
+      }
+      s3.push('');
+    }
+    if(comparison.flagged.length>0){
+      s3.push('FLAGGED — Strong in participant data, NOT observed in field:');
+      for(const f of comparison.flagged){
+        s3.push('  [FLAG] '+f.sub.replace(/_/g,' ')+' ('+f.pct+'%)');
+        s3.push('    '+f.note);
+      }
+      s3.push('');
+    }
+    if(comparison.fieldOnly.length>0){
+      s3.push('FIELD ONLY — Observed by facilitator, not reflected in participant scores:');
+      for(const f of comparison.fieldOnly){
+        s3.push('  [FIELD] '+f.key.replace(/_/g,' ')+' (x'+f.count+' | groups: '+f.groups.join(',')+')');
+        s3.push('    '+f.note);
+      }
+      s3.push('');
+    }
+    s3.push('CONTRADICTION PROTOCOL (RT5 Section 4.6):');
+    s3.push('  Field observation OUTWEIGHS self-report when they diverge.');
+    s3.push('  FIELD ONLY signals = primary diagnostic data.');
+    s3.push('  FLAGGED signals (strong in scores but not observed) = possible shadow protection.');
+  }
+  sections['S3 — COMPARISON']=s3.join('\n');
+
+  // ── SECTION 4: OPEN QUESTIONS ───────────────────────────────
+  let s4=[];
+  s4.push('SECTION 4 — OPEN QUESTION RESPONSES');
+  s4.push('');
+
+  const oqs=excelParsed?excelParsed.openQuestions:[];
+  if(oqs.length===0){
+    s4.push('No open question responses found in Excel data.');
+  } else {
+    for(const q of oqs){
+      if(!q.text||q.text.length<3) continue;
+      s4.push('['+q.name+' / '+q.group+']');
+      s4.push('  '+q.text.slice(0,400)+(q.text.length>400?'...':''));
+      const route=routeOpenQuestion(q.text);
+      if(route){
+        s4.push('  Signal: '+route.signal+' ('+route.sub+')');
+        s4.push('  Action: '+route.confirm);
+      }
+      s4.push('');
+    }
+  }
+  sections['S4 — OPEN QUESTIONS']=s4.join('\n');
+
+  // ── SECTION 5: MICROFIX ──────────────────────────────────────
+  let s5=[];
+  s5.push('SECTION 5 — '+(mode==='t1'?'MICROFIX RECOMMENDATION':'MICROFIX VALIDATION VERDICT'));
+  s5.push('');
+
+  if(mode==='t1'){
+    if(primary){
+      const rt1p=RT1[primary.sub]||{};
+      const primaryLever=primary.lever.split('/')[0].trim();
+      const rt5p=RT5[primaryLever]||{};
+
+      s5.push('RECOMMENDED MICROFIX SEQUENCE:');
+      s5.push('');
+      s5.push('  Fix 1 (Primary):   '+((rt1p.fix1||'TBD')));
+      s5.push('    Addresses: '+primary.sub.replace(/_/g,' ')+' ('+primaryLever+' lever)');
+      s5.push('    Threshold: '+rt1p.threshold+' — '+(primary.pct>=61?'CONFIRMED':'confirm with field observations'));
+      if(secondary&&secondary.pct>=41){
+        const rt1s=RT1[secondary.sub]||{};
+        const secLever=secondary.lever.split('/')[0].trim();
+        s5.push('');
+        s5.push('  Fix 2 (Secondary): '+((rt1s.fix1||'TBD')));
+        s5.push('    Addresses: '+secondary.sub.replace(/_/g,' ')+' ('+secLever+' lever)');
+      }
+      if(compoundSeq){
+        s5.push('');
+        s5.push('  COMPOUND SEQUENCE '+compoundSeq.seq+':');
+        s5.push('    Fix order: '+compoundSeq.def.fixes.join(' → '));
+        s5.push('    When: '+compoundSeq.def.when);
+      }
+      s5.push('');
+      s5.push('  Maximum 3 MicroFixes per intervention.');
+      s5.push('  Full MicroFix design requires Tier 2 mandate conversation.');
+      s5.push('');
+      s5.push('UNIVERSAL FRAMING SENTENCE (for debrief):');
+      s5.push('  "This is not a people problem. It is a design problem. The '+primaryLever);
+      s5.push('  architecture has a gap — and that gap produces the same result');
+      s5.push('  regardless of who is in the room."');
+      if(rt5p.frame){
+        s5.push('');
+        s5.push('LEVER-SPECIFIC DEBRIEF FRAME:');
+        s5.push('  "'+rt5p.frame+'"');
+      }
+    } else {
+      s5.push('Insufficient signal strength to confirm primary lever.');
+      s5.push('Review: gate results, participant count, and raw scores for data quality issues.');
+    }
+  } else {
+    // Tier 2 MicroFix Validation
+    if(!kResult){
+      s5.push('Tier 2 mode selected but no AppendixK sheet found in Excel file.');
+      s5.push('Upload Excel file containing the AppendixK sheet with participant scores to run validation.');
+    } else {
+      s5.push('ACTIVE LEVER:  '+kResult.lever);
+      s5.push('K SHEET:       '+kResult.rt.sheet);
+      s5.push('K_OA AVERAGE:  '+kResult.overall.toFixed(2));
+      s5.push('');
+      s5.push('VERDICT:  '+kResult.verdict);
+      s5.push('');
+      s5.push('SUB-SCORE BREAKDOWN:');
+      for(const sv of kResult.subVerdict){
+        if(sv.fix){
+          s5.push('  '+sv.code+' [Fix: '+sv.fix+']  Avg: '+sv.avg.toFixed(2)+'  — '+sv.status);
+        } else {
+          s5.push('  '+sv.code+' [Recal: '+sv.recal+']  Avg: '+sv.avg.toFixed(2)+'  — '+sv.status);
+        }
+      }
+      if(kResult.shadowFlag){
+        s5.push('');
+        s5.push('SHADOW FLAG (Ke >= 2.0):');
+        s5.push('  Cross-check RT5 contradiction protocol before redesigning.');
+        s5.push('  Shadow dynamic may be sustaining the failure — structural fix alone insufficient.');
+      }
+      s5.push('');
+      s5.push('NEXT STEP:');
+      if(kResult.overall>=3){
+        s5.push('  [HOLD]  Proceed to Tier 3 residency planning (Appendix J Section J3).');
+      } else if(kResult.overall>=2){
+        s5.push('  [PARTIAL]  MicroFix recalibration session required (Appendix G Part 2).');
+        s5.push('  Identify which Ka/Kb/Kc sub-score failed and recalibrate that element.');
+      } else {
+        s5.push('  [RECALIBRATE]  Full redesign required. Return to RT1 (Part 07 Section 7.6).');
+        s5.push('  Review RT5 contradiction protocol — field observation may reveal why fix failed.');
+      }
+    }
+  }
+  sections['S5 — MICROFIX']=s5.join('\n');
+
+  // ── SUMMARY ─────────────────────────────────────────────────
+  let s6=[];
+  s6.push('PLAIN LANGUAGE DIAGNOSTIC SUMMARY');
+  s6.push('For debrief use — no PA-8 terminology');
+  s6.push('');
+  if(primary){
+    const primaryLever=primary.lever.split('/')[0].trim();
+    const rt5p=RT5[primaryLever]||{};
+    s6.push('PRIMARY FINDING:');
+    s6.push('  '+primary.layer+' layer — '+primary.sub.replace(/_/g,' ')+' ('+primary.pct+'%)');
+    s6.push('  Architecture lever: '+primary.lever);
+    s6.push('');
+    if(rt5p.frame){
+      s6.push('DEBRIEF FRAME:');
+      s6.push('  "'+rt5p.frame+'"');
+      s6.push('');
+    }
+    s6.push('WHAT IS WORKING:');
+    if(groupQData&&groupQData.worked.length>0){
+      for(const w of groupQData.worked.slice(0,3))
+        s6.push('  '+w.strength);
+    } else {
+      s6.push('  No confirmed strengths from Group Quadrant. Check What Worked ticks.');
+    }
+    s6.push('');
+    s6.push('UNIVERSAL FRAMING:');
+    s6.push('  "This is not a people problem. It is a design problem."');
+  } else {
+    s6.push('Insufficient data for summary. Review input data and rerun.');
+  }
+  s6.push('');
+  s6.push('END OF DIAGNOSTIC OUTPUT');
+  s6.push('Paste this entire block into a new Claude thread for report generation.');
+  sections['SUMMARY']=s6.join('\n');
+
+  return sections;
+}
+
+function padR(s,n){ return (s+'').padEnd(n,' '); }
+
+// ================================================================
+// RENDER OUTPUT
+// ================================================================
+function renderOutput(sects){
+  const nav=document.getElementById('out-nav');
+  const content=document.getElementById('out-content');
+  nav.innerHTML='';
+  content.innerHTML='';
+
+  const order=['HEADER','S1 — PARTICIPANT DATA','S2 — FIELD OBSERVATIONS',
+               'S3 — COMPARISON','S4 — OPEN QUESTIONS','S5 — MICROFIX','SUMMARY'];
+
+  for(const key of order){
+    if(!sects[key]) continue;
+    const btn=document.createElement('button');
+    btn.className='out-nav-btn';
+    btn.textContent=key;
+    btn.onclick=()=>scrollToSection(key);
+    nav.appendChild(btn);
+  }
+
+  let fullHtml='';
+  for(const key of order){
+    if(!sects[key]) continue;
+    const id='sec-'+key.replace(/[^a-zA-Z0-9]/g,'-');
+    fullHtml+='<div class="out-section" id="'+id+'">';
+    fullHtml+='<div class="out-h1">'+key+'</div>';
+    // Colour coding
+    let text=sects[key];
+    text=text.replace(/\[CONFIRMED\]/g,'<span class="out-confirmed">[CONFIRMED]</span>');
+    text=text.replace(/\[FLAG\]/g,'<span class="out-flagged">[FLAG]</span>');
+    text=text.replace(/\[FIELD\]/g,'<span class="out-field">[FIELD]</span>');
+    text=text.replace(/\[STRENGTH\]/g,'<span class="out-strength">[STRENGTH]</span>');
+    text=text.replace(/\[SHADOW FLAG\]/g,'<span class="out-shadow">[SHADOW FLAG]</span>');
+    text=text.replace(/\[PRIVATE[^\]]*\]/g,(m)=>'<span class="out-private">'+m+'</span>');
+    text=text.replace(/\[W:[^\]]*\]/g,(m)=>'<span class="out-strength">'+m+'</span>');
+    text=text.replace(/\[X:[^\]]*\]/g,(m)=>'<span class="out-flagged">'+m+'</span>');
+    text=text.replace(/HOLD/g,'<span class="out-confirmed">HOLD</span>');
+    text=text.replace(/RECALIBRATE/g,'<span class="out-flagged">RECALIBRATE</span>');
+    text=text.replace(/PARTIAL/g,'<span style="color:var(--amber)">PARTIAL</span>');
+    fullHtml+='<pre style="white-space:pre-wrap;word-break:break-word;">'+text+'</pre>';
+    fullHtml+='</div>';
+  }
+  content.innerHTML=fullHtml;
+}
+
+function scrollToSection(key){
+  const id='sec-'+key.replace(/[^a-zA-Z0-9]/g,'-');
+  const el=document.getElementById(id);
+  if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ================================================================
+// COPY
+// ================================================================
+function copyFull(){
+  const order=['HEADER','S1 — PARTICIPANT DATA','S2 — FIELD OBSERVATIONS',
+               'S3 — COMPARISON','S4 — OPEN QUESTIONS','S5 — MICROFIX','SUMMARY'];
+  const lines=['===============================================================',
+               'FLOWMATRIX DIAGNOSTIC OUTPUT — FULL',
+               '===============================================================',''];
+  for(const key of order){
+    if(!sections[key]) continue;
+    lines.push('');
+    lines.push('--- '+key+' ---');
+    lines.push(sections[key]);
+  }
+  doCopy(lines.join('\n'),document.querySelector('.copy-btn'));
+}
+
+function copySection(){
+  // Copy whichever section is most visible in the viewport
+  const content=document.getElementById('out-content');
+  const secEls=content.querySelectorAll('.out-section');
+  let best=null,bestTop=Infinity;
+  const scrollTop=content.scrollTop;
+  for(const el of secEls){
+    const top=el.offsetTop-scrollTop;
+    if(top>=0&&top<bestTop){ bestTop=top; best=el; }
+  }
+  if(best){
+    const key=best.querySelector('.out-h1').textContent;
+    doCopy(sections[key]||'',document.querySelectorAll('.copy-btn')[1]);
+  }
+}
+
+function doCopy(text,btn){
+  if(!btn) return;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(text).then(()=>{
+      const orig=btn.textContent;
+      btn.textContent='✓ COPIED';btn.classList.add('copied');
+      setTimeout(()=>{btn.textContent=orig;btn.classList.remove('copied');},2500);
+    });
+  } else {
+    const ta=document.createElement('textarea');
+    ta.value=text;document.body.appendChild(ta);
+    ta.select();document.execCommand('copy');document.body.removeChild(ta);
+  }
+}
+
+// ================================================================
+
+// ================================================================
+// MICROFIX DATA STORES
+// ================================================================
+let mfBaselineData = null;
+let mfKData = null;
+let mfIRData = null;
+let mfGCRData = null;
+let mfGQData = null;
+let mfEvalData = null;
+let mfFieldLog = null;
+
+// External Marker codes for MicroFix Field App log
+const MF_MARKERS = {
+  'NAV': {name:'Navigator', healthy:'Navigator', broken:'Drifter', lever:'Decisions/Rules'},
+  'BLD': {name:'Builder',   healthy:'Builder',   broken:'Isolator', lever:'Flow/Roles'},
+  'CHK': {name:'Checker',   healthy:'Checker',   broken:'Gatekeeper', lever:'Rules/Flow'},
+  'CON': {name:'Connector', healthy:'Connector', broken:'Bottleneck', lever:'Flow'},
+  'ANC': {name:'Anchor',    healthy:'Anchor',    broken:'Rigid', lever:'Rules/Decisions'},
+  'ENR': {name:'Energiser', healthy:'Energiser', broken:'Accelerator', lever:'Constraints'},
+  'RES': {name:'Resolver',  healthy:'Resolver',  broken:'Overtaker', lever:'Decisions/Power'},
+};
+
+// Org Dynamics Lens 2 codes (moved from Diagnostic to MicroFix)
+const MF_LENS2 = {
+  'PT': {name:'Power Topology',    desc:'Real authority does not match org chart.'},
+  'UR': {name:'Unwritten Rule',    desc:'Norm everyone follows, nobody states.'},
+  'PS': {name:'Protected Story',   desc:'Narrative the organisation cannot challenge.'},
+  'IA': {name:'Informal Alliance', desc:'Relationship structure beneath the org chart.'},
+  'SF': {name:'Scapegoat Function',desc:'Carries the organisation\'s failure.'},
+  'FM': {name:'Frozen Moment',     desc:'Past event still governing present behaviour.'},
+};
+
+// External Marker phrase routing (K-IR Slide 1)
+const MF_MARKER_PHRASES = [
+  {phrase:'Someone kept us on track when we lost direction',   pos:'Navigator', neg:'Drifter'},
+  {phrase:'One person made the calls — others waited',         pos:'Resolver',  neg:'Overtaker'},
+  {phrase:'Someone unblocked us when we were stuck',           pos:'Resolver',  neg:'Overtaker'},
+  {phrase:'Information did not reach everyone who needed it',  pos:'Connector', neg:'Bottleneck'},
+  {phrase:'Not everyone\'s contribution was picked up',        pos:'Builder',   neg:'Isolator/Exile'},
+  {phrase:'Someone was checking if we were doing it right',    pos:'Checker',   neg:'Gatekeeper'},
+  {phrase:'The pace was driven by one person',                 pos:'Energiser', neg:'Accelerator'},
+  {phrase:'Someone carried the pressure so others did not',    pos:'Anchor',    neg:'Shield'},
+];
+
+// ================================================================
+// MICROFIX FILE HANDLERS
+// ================================================================
+function handleMFKDrop(ev){ev.preventDefault();document.getElementById('mf-k-zone').classList.remove('drag');const f=ev.dataTransfer.files[0];if(f)handleMFKFile(f);}
+function handleMFIRFile(f){readMFExcel(f,'ir','mf-ir-label');}
+function handleMFGCRFile(f){readMFExcel(f,'gcr','mf-gcr-label');}
+function handleMFGQFile(f){readMFExcel(f,'gq','mf-gq-label');}
+function handleMFEvalFile(f){readMFExcel(f,'eval','mf-eval-label');}
+function handleMFKDrop(ev){ev.preventDefault();const f=ev.dataTransfer.files[0];if(f)handleMFKFile(f);}
+
+function handleMFKFile(f){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      mfKData=wb;
+      document.getElementById('mf-k-label').textContent='✓ '+f.name;
+      document.getElementById('mf-k-zone').classList.add('loaded');
+    }catch(err){showError('Appendix K read error: '+err.message);}
+  };
+  reader.readAsArrayBuffer(f);
+}
+
+function readMFExcel(f,store,labelId){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:null});
+      if(store==='ir') mfIRData=rows;
+      else if(store==='gcr') mfGCRData=rows;
+      else if(store==='gq') mfGQData=rows;
+      else if(store==='eval') mfEvalData=rows;
+      document.getElementById(labelId).textContent='✓ '+f.name;
+      document.getElementById(labelId).parentElement.classList.add('loaded');
+    }catch(err){showError(store.toUpperCase()+' read error: '+err.message);}
+  };
+  reader.readAsArrayBuffer(f);
+}
+
+// ================================================================
+// MICROFIX BASELINE PARSER
+// ================================================================
+function parseBaseline(text){
+  if(!text||!text.trim()) return null;
+  const lines=text.split('\n');
+  let result={client:'',date:'',lever:'',primarySub:'',primaryPct:0,secondarySub:'',secondaryPct:0,shadowPatterns:[],fixes:[],koa:0};
+  for(const line of lines){
+    if(line.includes('Confirmed Lever:')) result.lever=line.split(':')[1]?.trim()||''
+    if(line.includes('Primary Sub-layer:')){ const m=line.match(/([\w_]+)\s*\((\d+)/); if(m){result.primarySub=m[1];result.primaryPct=parseInt(m[2]);}}
+    if(line.includes('Secondary Sub-layer:')){ const m=line.match(/([\w_]+)\s*\((\d+)/); if(m){result.secondarySub=m[1];result.secondaryPct=parseInt(m[2]);}}
+    if(line.includes('Shadow Patterns:')) result.shadowPatterns=line.replace('Shadow Patterns Observed:','').trim().split(' ').filter(Boolean);
+    if(line.includes('MicroFix Recommended:')) result.fixes=line.replace('MicroFix Recommended:','').trim().split('/').map(s=>s.trim());
+    if(line.includes('Baseline K_OA:')){ const m=line.match(/([\d.]+)/); if(m) result.koa=parseFloat(m[1]);}
+  }
+  return result.lever ? result : null;
+}
+
+// ================================================================
+// MICROFIX FIELD LOG PARSER
+// ================================================================
+function parseMFFieldLog(text){
+  const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
+  let signals=[], shadows=[], lens2=[], markers=[], meta={client:'',activity:'',lever:''};
+  for(const line of lines){
+    if(line.startsWith('Client:')) meta.client=line.replace('Client:','').trim();
+    if(line.startsWith('Activity:')) meta.activity=line.replace('Activity:','').trim();
+    if(line.startsWith('Lever:')) meta.lever=line.replace('Lever:','').trim();
+    // PA-8 signal: "02:09 Finance FR·De-Fr·H"
+    const sigM=line.match(/^(\d+:\d+)\s+(\S+)\s+([A-Z]{2})·([A-Za-z\-]+)·([HML])$/);
+    if(sigM) signals.push({ts:sigM[1],group:sigM[2],layer:sigM[3],sub:sigM[4],conf:sigM[5]});
+    // Shadow Lens1: "02:09 Finance AN·H"
+    const shadM=line.match(/^(\d+:\d+)\s+(\S+)\s+([A-Z]{2})·([HML])$/);
+    if(shadM && MF_MARKERS[shadM[3]]===undefined && RT6[shadM[3]]){
+      shadows.push({ts:shadM[1],group:shadM[2],code:shadM[3],conf:shadM[4]});
+    }
+    // Lens 2: "03:05 Finance PT·M"
+    const lens2M=line.match(/^(\d+:\d+)\s+(\S+)\s+([A-Z]{2})·([HML])$/);
+    if(lens2M && MF_LENS2[lens2M[3]]){
+      lens2.push({ts:lens2M[1],group:lens2M[2],code:lens2M[3],conf:lens2M[4]});
+    }
+    // External Marker: "05:10 Finance NAV·H" or "05:10 Finance NAV·B·H"
+    const markM=line.match(/^(\d+:\d+)\s+(\S+)\s+([A-Z]{3})·([HB])·?([HML])?$/);
+    if(markM && MF_MARKERS[markM[3]]){
+      markers.push({ts:markM[1],group:markM[2],code:markM[3],form:markM[4],conf:markM[5]||'M'});
+    }
+  }
+  return {meta,signals,shadows,lens2,markers};
+}
+
+// ================================================================
+// APPENDIX K PARSER (reused from existing RT4 logic)
+// ================================================================
+function parseMFAppendixK(wb){
+  const ws=wb.Sheets['AppendixK'];
+  if(!ws) return null;
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+  let activeLever=null;
+  for(const row of rows.slice(0,4)){
+    for(const v of row){
+      if(v&&Object.keys(RT4).includes(v.toString().trim())){
+        activeLever=v.toString().trim(); break;
+      }
+    }
+    if(activeLever) break;
+  }
+  const kCodes=['K_OA','Ka','Kb','Kc','Kd','Ke'];
+  let kScores={};
+  for(let ri=5;ri<=10;ri++){
+    const row=rows[ri];
+    if(!row) continue;
+    const avg=row[8];
+    if(avg!==null&&avg!==undefined&&!isNaN(Number(avg))){
+      kScores[kCodes[ri-5]]=Math.round(Number(avg)*100)/100;
+    }
+  }
+  return {activeLever,kScores};
+}
+
+// ================================================================
+// K-IR PARSER (Individual Review ratings from Mentimeter export)
+// ================================================================
+function parseMFIR(rows){
+  if(!rows||rows.length<2) return null;
+  // Mentimeter export format: Row 0 = headers, Row 1+ = responses
+  // Headers contain question text, values are 1-4 ratings
+  let slide1_totals=new Array(8).fill(0);
+  let slide1_counts=new Array(8).fill(0);
+  let slide2_totals=new Array(5).fill(0);
+  let slide2_counts=new Array(5).fill(0);
+  let slide3_responses=[];
+  let respondents=0;
+
+  for(let r=1;r<rows.length;r++){
+    const row=rows[r];
+    if(!row||!row.some(v=>v!==null)) continue;
+    respondents++;
+    // Assume first 8 columns after identifier = Slide 1 ratings
+    // Next 5 columns = Slide 2 ratings
+    // Last column = Slide 3 open text
+    for(let i=0;i<8;i++){
+      const v=Number(row[i+1]);
+      if(!isNaN(v)&&v>0){slide1_totals[i]+=v;slide1_counts[i]++;}
+    }
+    for(let i=0;i<5;i++){
+      const v=Number(row[i+9]);
+      if(!isNaN(v)&&v>0){slide2_totals[i]+=v;slide2_counts[i]++;}
+    }
+    const openText=row[14];
+    if(openText&&typeof openText==='string'&&openText.trim()) slide3_responses.push(openText.trim());
+  }
+
+  const slide1_avgs=slide1_totals.map((t,i)=>slide1_counts[i]>0?Math.round(t/slide1_counts[i]*10)/10:0);
+  const slide2_avgs=slide2_totals.map((t,i)=>slide2_counts[i]>0?Math.round(t/slide2_counts[i]*10)/10:0);
+
+  // Find dominant External Marker signals (rated 3+ by majority)
+  const dominant_markers=slide1_avgs.map((avg,i)=>({
+    phrase:MF_MARKER_PHRASES[i].phrase,
+    avg, pos:MF_MARKER_PHRASES[i].pos, neg:MF_MARKER_PHRASES[i].neg,
+    strong: avg>=3
+  })).filter(m=>m.strong).sort((a,b)=>b.avg-a.avg);
+
+  // Sub-layer confirmation
+  const ka_avg=slide2_avgs[0];
+  const kb_avg=slide2_avgs[1];
+  const kc_avg=slide2_avgs[2];
+  const kd_avg=slide2_avgs[3];
+  const ke_avg=slide2_avgs[4];
+
+  let ir_verdict='INCONCLUSIVE';
+  if(ka_avg>=3&&kb_avg>=3&&kd_avg<2&&ke_avg<2) ir_verdict='HOLD';
+  else if(kd_avg>=2||ke_avg>=2) ir_verdict='PARTIAL';
+  else if(ka_avg<2&&kb_avg<2) ir_verdict='RECALIBRATE';
+
+  return {respondents,slide1_avgs,slide2_avgs,dominant_markers,ir_verdict,
+          ka_avg,kb_avg,kc_avg,kd_avg,ke_avg,slide3_responses};
+}
+
+// ================================================================
+// EVAL FORM PARSER (Tally CSV export)
+// ================================================================
+function parseMFEval(rows){
+  if(!rows||rows.length<2) return null;
+  let q4=[0,0,0,0], q5_total=0, q6_total=0, q7=[],
+      q8=[0,0,0,0], q10=[0,0,0,0], q11_flags={}, q12_responses=[];
+  let count=0;
+
+  for(let r=1;r<rows.length;r++){
+    const row=rows[r];
+    if(!row) continue;
+    count++;
+    // Q4 options: Noticeably different/Slightly different/Similar/Harder
+    const q4v=parseInt(row[4]); if(q4v>=1&&q4v<=4) q4[q4v-1]++;
+    // Q5,Q6 ratings
+    const q5v=Number(row[5]); if(!isNaN(q5v)&&q5v>0) q5_total+=q5v;
+    const q6v=Number(row[6]); if(!isNaN(q6v)&&q6v>0) q6_total+=q6v;
+    // Q10 confidence
+    const q10v=parseInt(row[10]); if(q10v>=1&&q10v<=4) q10[q10v-1]++;
+    // Q12 open text
+    const q12v=row[12];
+    if(q12v&&typeof q12v==='string'&&q12v.trim()) q12_responses.push(q12v.trim());
+  }
+
+  const q5_avg=count>0?Math.round(q5_total/count*10)/10:0;
+  const q6_avg=count>0?Math.round(q6_total/count*10)/10:0;
+
+  let eval_signal='INCONCLUSIVE';
+  if(q5_avg>=3&&q6_avg<=2) eval_signal='HOLD';
+  else if(q5_avg>=2&&q6_avg<=2.5) eval_signal='PARTIAL';
+  else if(q5_avg<2||q6_avg>=3) eval_signal='RECALIBRATE';
+
+  const confident_pct=count>0?Math.round((q10[0]+q10[1])/count*100):0;
+  const uncertain_pct=count>0?Math.round((q10[2]+q10[3])/count*100):0;
+
+  return {count,q4,q5_avg,q6_avg,q10,q12_responses,eval_signal,confident_pct,uncertain_pct};
+}
+
+// ================================================================
+// MICROFIX OUTPUT FORMATTER
+// ================================================================
+function formatMFOutput(client,activity,sdate,baseline,kResult,irResult,evalResult,fieldParsed){
+  let mfSections={};
+
+  // S1 — DIAGNOSTIC BASELINE LOADED
+  let s1=[];
+  s1.push('SECTION 1 — DIAGNOSTIC BASELINE');
+  s1.push('');
+  if(baseline){
+    s1.push('Confirmed Lever:       '+baseline.lever);
+    s1.push('Primary Sub-layer:     '+baseline.primarySub+' ('+baseline.primaryPct+'%)');
+    if(baseline.secondarySub) s1.push('Secondary Sub-layer:   '+baseline.secondarySub+' ('+baseline.secondaryPct+'%)');
+    s1.push('Shadow Baseline:       '+(baseline.shadowPatterns.join(' ')||'None recorded'));
+    s1.push('MicroFix Recommended:  '+baseline.fixes.join(' / '));
+    s1.push('Baseline K_OA:         '+(baseline.koa||'Not estimated'));
+  } else {
+    s1.push('No baseline pasted — lever and baseline scores not available.');
+    s1.push('Paste the Diagnostic Baseline Block from the previous Diagnostic run.');
+  }
+  mfSections['S1 — DIAGNOSTIC BASELINE']=s1.join('\n');
+
+  // S2 — MICROFIX DATA READ
+  let s2=[];
+  s2.push('SECTION 2 — MICROFIX DATA READ');
+  s2.push('');
+
+  // Appendix K
+  if(kResult){
+    s2.push('APPENDIX K — '+kResult.activeLever+' LEVER');
+    s2.push('  K_OA Average:  '+kResult.overall.toFixed(2));
+    s2.push('  Ka (Fix 1):    '+((kResult.kScores['Ka']||0).toFixed(2))+'  — '+(kResult.kScores['Ka']>=3?'Holding':'Below threshold'));
+    s2.push('  Kb (Fix 2):    '+((kResult.kScores['Kb']||0).toFixed(2))+'  — '+(kResult.kScores['Kb']>=3?'Holding':'Below threshold'));
+    s2.push('  Kc (Fix 3):    '+((kResult.kScores['Kc']||0).toFixed(2))+'  — '+(kResult.kScores['Kc']>=3?'Holding':'Below threshold'));
+    s2.push('  Kd (Flag 1):   '+((kResult.kScores['Kd']||0).toFixed(2))+'  — '+(kResult.kScores['Kd']>=2?'RECALIBRATION FLAG RAISED':'Clear'));
+    s2.push('  Ke (Flag 2):   '+((kResult.kScores['Ke']||0).toFixed(2))+'  — '+(kResult.kScores['Ke']>=2?'SHADOW FLAG RAISED':'Clear'));
+    s2.push('');
+  } else {
+    s2.push('Appendix K: Not uploaded');
+    s2.push('');
+  }
+
+  // K-IR
+  if(irResult){
+    s2.push('K-IR INDIVIDUAL REVIEW ('+irResult.respondents+' respondents)');
+    s2.push('  Slide 2 sub-layer confirmation:');
+    s2.push('    Ka avg: '+irResult.ka_avg+'  Kb avg: '+irResult.kb_avg+'  Kc avg: '+irResult.kc_avg);
+    s2.push('    Kd avg: '+irResult.kd_avg+'  Ke avg: '+irResult.ke_avg);
+    s2.push('  Individual review signal: '+irResult.ir_verdict);
+    if(irResult.dominant_markers.length>0){
+      s2.push('');
+      s2.push('  Dominant External Marker phrases (rated 3+ by majority):');
+      for(const m of irResult.dominant_markers){
+        s2.push('  ['+m.avg+'] "'+m.phrase+'"');
+        s2.push('    Routes to: '+m.pos+' (healthy) / '+m.neg+' (broken)');
+      }
+    }
+    if(irResult.slide3_responses.length>0){
+      s2.push('');
+      s2.push('  Open responses — "The moment that stood out most":');
+      for(const r of irResult.slide3_responses.slice(0,5)){
+        s2.push('  · "'+r+'"');
+      }
+    }
+    s2.push('');
+  } else {
+    s2.push('K-IR Individual Review: Not uploaded');
+    s2.push('');
+  }
+
+  // Evaluation Form
+  if(evalResult){
+    s2.push('EVALUATION FORM ('+evalResult.count+' respondents)');
+    s2.push('  Q5 shift avg: '+evalResult.q5_avg+'  Q6 pattern return avg: '+evalResult.q6_avg);
+    s2.push('  Evaluation signal: '+evalResult.eval_signal);
+    s2.push('  Commitment confidence: '+evalResult.confident_pct+'% confident / '+evalResult.uncertain_pct+'% uncertain');
+    if(evalResult.q12_responses.length>0){
+      s2.push('');
+      s2.push('  "The one thing I will do differently Monday is..."');
+      for(const r of evalResult.q12_responses.slice(0,5)){
+        s2.push('  · "'+r+'"');
+      }
+    }
+    s2.push('');
+  } else {
+    s2.push('Evaluation Form: Not uploaded');
+    s2.push('');
+  }
+
+  // Field App
+  if(fieldParsed&&(fieldParsed.signals.length>0||fieldParsed.markers.length>0)){
+    s2.push('MICROFIX FIELD APP OBSERVATIONS');
+    if(fieldParsed.signals.length>0){
+      s2.push('  PA-8 Signals (confirmed lever sub-layers):');
+      const sigFreq={};
+      for(const s of fieldParsed.signals){
+        const k=s.layer+'·'+s.sub;
+        if(!sigFreq[k]) sigFreq[k]={count:0,conf:s.conf};
+        sigFreq[k].count++;
+      }
+      for(const [k,d] of Object.entries(sigFreq)){
+        s2.push('  '+k+'  x'+d.count+'  conf:'+d.conf);
+      }
+    }
+    if(fieldParsed.markers.length>0){
+      s2.push('  External Markers observed:');
+      for(const m of fieldParsed.markers){
+        const mDef=MF_MARKERS[m.code]||{};
+        s2.push('  '+m.ts+'  '+m.group+'  '+m.code+'['+m.form+']'+'  — '+(m.form==='H'?mDef.healthy:mDef.broken));
+      }
+    }
+    s2.push('');
+  }
+
+  mfSections['S2 — DATA READ']=s2.join('\n');
+
+  // S3 — VERDICT
+  let s3=[];
+  s3.push('SECTION 3 — VERDICT');
+  s3.push('');
+
+  // Synthesise verdict from all sources
+  let verdicts=[];
+  if(kResult) verdicts.push(kResult.verdict.split(' ')[0]);
+  if(irResult) verdicts.push(irResult.ir_verdict);
+  if(evalResult) verdicts.push(evalResult.eval_signal);
+
+  const holdCount=verdicts.filter(v=>v==='HOLD').length;
+  const recalCount=verdicts.filter(v=>v==='RECALIBRATE').length;
+  const partCount=verdicts.filter(v=>v==='PARTIAL').length;
+
+  let finalVerdict='INCONCLUSIVE';
+  if(holdCount===verdicts.length&&verdicts.length>0) finalVerdict='HOLD';
+  else if(recalCount>0&&recalCount>=holdCount) finalVerdict='RECALIBRATE';
+  else if(partCount>0||holdCount>0) finalVerdict='PARTIAL';
+
+  s3.push('OVERALL VERDICT: '+finalVerdict);
+  s3.push('');
+  s3.push('Source verdicts:');
+  if(kResult) s3.push('  Appendix K:          '+kResult.verdict.split(' ')[0]+'  (K_OA: '+kResult.overall.toFixed(2)+')');
+  if(irResult) s3.push('  K-IR Individual:     '+irResult.ir_verdict);
+  if(evalResult) s3.push('  Evaluation Form:     '+evalResult.eval_signal+'  (Q5: '+evalResult.q5_avg+' / Q6: '+evalResult.q6_avg+')');
+  s3.push('');
+
+  // Contradiction check
+  if(holdCount>0&&recalCount>0){
+    s3.push('CONTRADICTION FLAG:');
+    s3.push('  Sources disagree. Field observation outweighs self-report per RT5 protocol.');
+    s3.push('  If Field App shows signal still active — treat as PARTIAL or RECALIBRATE.');
+    s3.push('');
+  }
+
+  // Shadow flag
+  if(kResult&&(kResult.kScores['Ke']||0)>=2){
+    s3.push('SHADOW FLAG (Ke >= 2.0):');
+    s3.push('  Cross-check RT5 contradiction protocol before redesigning.');
+    s3.push('  Shadow dynamic may be sustaining the failure — structural fix alone insufficient.');
+    s3.push('');
+  }
+
+  // Comparison to baseline
+  if(baseline&&kResult){
+    s3.push('BASELINE COMPARISON:');
+    s3.push('  Diagnostic baseline K_OA prediction: '+(baseline.koa||'Not estimated'));
+    s3.push('  MicroFix K_OA actual:                '+kResult.overall.toFixed(2));
+    const diff=baseline.koa?kResult.overall-baseline.koa:null;
+    if(diff!==null) s3.push('  Movement:                           '+(diff>0?'+':'')+diff.toFixed(2));
+  }
+
+  mfSections['S3 — VERDICT']=s3.join('\n');
+
+  // S4 — LEADERSHIP DEPLOYMENT READ (private)
+  let s4=[];
+  s4.push('SECTION 4 — LEADERSHIP DEPLOYMENT READ');
+  s4.push('[PRIVATE — CEO/COO ONLY — NOT FOR GROUP DISTRIBUTION]');
+  s4.push('');
+  if(fieldParsed&&fieldParsed.markers.length>0){
+    const positive=fieldParsed.markers.filter(m=>m.form==='H');
+    const broken=fieldParsed.markers.filter(m=>m.form==='B');
+    if(positive.length>0){
+      s4.push('POSITIVE MARKERS OBSERVED (confirmed in field):');
+      for(const m of positive){
+        const mDef=MF_MARKERS[m.code]||{};
+        s4.push('  '+m.group+'  '+mDef.healthy+'  (conf: '+m.conf+')');
+      }
+      s4.push('');
+    }
+    if(broken.length>0){
+      s4.push('BROKEN MARKERS OBSERVED (facilitator — do not share in group):');
+      for(const m of broken){
+        const mDef=MF_MARKERS[m.code]||{};
+        s4.push('  '+m.group+'  '+mDef.broken+'  (conf: '+m.conf+')');
+      }
+      s4.push('');
+    }
+  } else {
+    s4.push('No External Marker captures in Field App log.');
+    s4.push('Positive marker assignments available in K-GQ Section 1 (if uploaded).');
+    s4.push('');
+  }
+  if(evalResult){
+    s4.push('STRUCTURAL RESISTANCE (Q11 — what makes it hardest to hold):');
+    s4.push('  Commitment confidence: '+evalResult.confident_pct+'% confident');
+    if(evalResult.uncertain_pct>40){
+      s4.push('  HIGH UNCERTAINTY — '+evalResult.uncertain_pct+'% uncertain or not confident');
+      s4.push('  Recommend: coaching session for L3 confirmation, not questionnaire');
+    }
+    s4.push('');
+  }
+  if(fieldParsed&&fieldParsed.lens2.length>0){
+    s4.push('LENS 2 — ORG DYNAMICS (single session = LOW confidence — hypothesis only):');
+    for(const o of fieldParsed.lens2){
+      const l2=MF_LENS2[o.code]||{};
+      s4.push('  '+o.ts+'  '+o.group+'  '+o.code+'['+o.conf+'] — '+l2.name);
+      s4.push('    '+l2.desc);
+    }
+  }
+  mfSections['S4 — LEADERSHIP READ (PRIVATE)']=s4.join('\n');
+
+  // S5 — L3 CHECKLIST
+  let s5=[];
+  s5.push('SECTION 5 — L3 CHECKLIST + NEXT STEP');
+  s5.push('');
+  s5.push('L3 CONFIRMATION — '+( new Date().toLocaleDateString()+' + 7 to 14 days'));
+  s5.push('Method: Questionnaire or coaching session per group');
+  s5.push('');
+  s5.push('CHECKLIST (from Group Quadrant Section 3 — enter manually if not uploaded):');
+  s5.push('  Commitment 1: _________________________________');
+  s5.push('    Owner: _______________  By when: ___________');
+  s5.push('    Holding: YES / PARTIAL / NO');
+  s5.push('');
+  s5.push('  Commitment 2: _________________________________');
+  s5.push('    Owner: _______________  By when: ___________');
+  s5.push('    Holding: YES / PARTIAL / NO');
+  s5.push('');
+  s5.push('  Commitment 3: _________________________________');
+  s5.push('    Owner: _______________  By when: ___________');
+  s5.push('    Holding: YES / PARTIAL / NO');
+  s5.push('');
+
+  if(evalResult&&evalResult.q12_responses.length>0){
+    s5.push('INDIVIDUAL INTENTIONS (Q12 — check at L3):');
+    for(const r of evalResult.q12_responses){
+      s5.push('  · "'+r+'"  → Holding: YES / NO');
+    }
+    s5.push('');
+  }
+
+  s5.push('RECOMMENDED NEXT STEP:');
+  if(finalVerdict==='HOLD'){
+    s5.push('  EMBED — Proceed to Embed & Confirm (Tier 3).');
+    s5.push('  Return visits at weeks 2, 4, 8, 12.');
+  } else if(finalVerdict==='PARTIAL'){
+    s5.push('  RECALIBRATE specific elements — identify which Ka/Kb/Kc failed.');
+    s5.push('  Run targeted MicroFix on the failing element only.');
+  } else if(finalVerdict==='RECALIBRATE'){
+    s5.push('  RETURN TO DIAGNOSTIC — Fix did not hold.');
+    s5.push('  Review RT5 contradiction protocol.');
+    s5.push('  Check whether shadow dynamic is sustaining the failure.');
+  } else {
+    s5.push('  Insufficient data for verdict. Upload all data streams and re-run.');
+  }
+  s5.push('');
+  s5.push('END OF MICROFIX REPORT');
+  s5.push('Paste this entire block into a new Claude thread for client report generation.');
+  mfSections['S5 — L3 CHECKLIST']=s5.join('\n');
+
+  return mfSections;
+}
+
+
+// ================================================================
+// MAIN RUN — BOTH MODES
+// ================================================================
+function runEngine(){
+  const errors=[];
+  const client=document.getElementById('client').value.trim();
+  const activity=document.getElementById('activity').value.trim();
+  const sdate=document.getElementById('sdate').value.trim();
+  
+  const btn=document.getElementById('calc-btn');
+  btn.disabled=true;
+  btn.textContent='⏳  Processing...';
+  document.getElementById('error-display').style.display='none';
+
+  try{
+    if(currentStage==='diagnostic'){
+      // ── DIAGNOSTIC MODE ──
+      const diagExcel=diagExcelData;
+      const fieldText=document.getElementById('diag-field-log').value.trim();
+      
+      if(!diagExcel&&!fieldText){
+        showError('Please upload an Excel file and/or paste a Field App log.');
+        btn.disabled=false; btn.textContent='▶  RUN ENGINE'; return;
+      }
+
+      let excelParsed=null,groupSheetData=null;
+      if(diagExcel){
+        excelParsed=parseIndividual(diagExcel);
+        groupSheetData=parseGroup(diagExcel);
+      }
+
+      let fieldParsed=null;
+      if(fieldText) fieldParsed=parseFieldLog(fieldText);
+
+      let globalScores={},groupScores={};
+      if(excelParsed){
+        const scored=calcScores(excelParsed);
+        globalScores=scored.globalScores;
+        groupScores=scored.groupScores;
+      }
+
+      let groupQData=null;
+      if(groupSheetData) groupQData=routeGroupQuadrant(groupSheetData);
+
+      let comparison=null;
+      if(excelParsed&&fieldParsed) comparison=compareStreams(globalScores,fieldParsed);
+
+      const sects=formatOutput(client,activity,sdate,'t1',excelParsed,fieldParsed,
+        globalScores,groupScores,groupQData,comparison,null);
+
+      // Generate baseline block and append to S5
+      const primary=findPrimaryLevers(globalScores)[0];
+      const shadow=fieldParsed&&fieldParsed.shadowEvents?fieldParsed.shadowEvents.filter(e=>e.conf==='H'||e.conf==='M'):[]; 
+      const baselineBlock=generateBaselineBlock(client,sdate,primary,globalScores,shadow);
+      if(sects['S5 — MICROFIX']){
+        sects['S5 — MICROFIX']=sects['S5 — MICROFIX']+'\n\n'+baselineBlock;
+      }
+
+      renderOutput(sects);
+      document.getElementById('output-section').style.display='block';
+      document.getElementById('output-section').scrollIntoView({behavior:'smooth'});
+
+    } else {
+      // ── MICROFIX MODE ──
+      const baselineText=document.getElementById('mf-baseline-text').value.trim();
+      const fieldText=document.getElementById('mf-field-log').value.trim();
+
+      if(!baselineText&&!mfKData&&!mfIRData&&!mfEvalData){
+        showError('Please paste the Diagnostic Baseline and upload at least Appendix K data.');
+        btn.disabled=false; btn.textContent='▶  RUN ENGINE'; return;
+      }
+
+      const baseline=parseBaseline(baselineText);
+      const kResult=mfKData?runRT4(parseMFAppendixK(mfKData)):null;
+      const irResult=mfIRData?parseMFIR(mfIRData):null;
+      const evalResult=mfEvalData?parseMFEval(mfEvalData):null;
+      const fieldParsed=fieldText?parseMFFieldLog(fieldText):null;
+
+      const mfSects=formatMFOutput(client,activity,sdate,baseline,kResult,irResult,evalResult,fieldParsed);
+
+      renderOutput(mfSects);
+      document.getElementById('output-section').style.display='block';
+      document.getElementById('output-section').scrollIntoView({behavior:'smooth'});
+    }
+
+  }catch(err){
+    showError('Engine error: '+err.message+'\n\n'+err.stack);
+  }
+
+  btn.disabled=false;
+  btn.textContent='▶  RUN ENGINE';
+}
+
+// ================================================================
+// GENERATE DIAGNOSTIC BASELINE BLOCK (appended to S5 output)
+// ================================================================
+function generateBaselineBlock(client,date,primary,globalScores,shadowEvents){
+  if(!primary) return '';
+  const secondary=findPrimaryLevers(globalScores)[1]||null;
+  const shadowStr=shadowEvents.map(e=>e.pattern+'·'+e.conf).join(' ')||'None';
+  const rt1p=RT1[primary.sub]||{};
+  const lines=[
+    '',
+    '=== DIAGNOSTIC BASELINE — FOR MICROFIX INPUT ===',
+    'Client: '+client,
+    'Date: '+date,
+    'Confirmed Lever: '+primary.lever.split('/')[0].trim(),
+    'Primary Sub-layer: '+primary.sub+' ('+primary.pct+'%)',
+    secondary?('Secondary Sub-layer: '+secondary.sub+' ('+secondary.pct+'%)'):null,
+    'Shadow Patterns Observed: '+shadowStr,
+    'MicroFix Recommended: '+(rt1p.fix1||'—')+' / '+(rt1p.fix2||'—'),
+    'Baseline K_OA Prediction: (enter after review)',
+    '=== END BASELINE — COPY THIS BLOCK FOR MICROFIX ENGINE ===',
+  ].filter(l=>l!==null);
+  return lines.join('\n');
+}
+
+
+</script>
+</body>
+</html>
